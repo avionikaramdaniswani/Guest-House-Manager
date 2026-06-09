@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Wisma Eucaliptus PMS"
+version = "1.0.0"
+id = "artifacts/wisma"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 26272
+
+[services.development]
+run = "pnpm --filter @workspace/wisma run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/wisma", "run", "build" ]
+publicDir = "artifacts/wisma/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "26272"
+BASE_PATH = "/"

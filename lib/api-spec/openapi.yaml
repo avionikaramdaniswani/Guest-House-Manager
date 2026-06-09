@@ -3,13 +3,25 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Wisma Eucaliptus / Guest House Deluxe - Property Management System API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: PIN authentication
+  - name: rooms
+    description: Room management
+  - name: guests
+    description: Guest management
+  - name: bookings
+    description: Booking and stay management
+  - name: reports
+    description: Reports and statistics
+  - name: activity
+    description: Staff activity log
 paths:
   /healthz:
     get:
@@ -24,6 +36,473 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with 4-digit PIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+        "401":
+          description: Invalid PIN
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/verify:
+    get:
+      operationId: verifySession
+      tags: [auth]
+      summary: Verify session token
+      responses:
+        "200":
+          description: Session valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+        "401":
+          description: Invalid or expired session
+
+  /rooms:
+    get:
+      operationId: getRooms
+      tags: [rooms]
+      summary: List all rooms with current status
+      responses:
+        "200":
+          description: List of rooms
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Room"
+
+  /rooms/{id}:
+    get:
+      operationId: getRoom
+      tags: [rooms]
+      summary: Get a single room with current occupant info
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Room detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomDetail"
+        "404":
+          description: Room not found
+    patch:
+      operationId: updateRoom
+      tags: [rooms]
+      summary: Update room (notes, blocked status)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoomUpdate"
+      responses:
+        "200":
+          description: Updated room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+
+  /guests:
+    get:
+      operationId: getGuests
+      tags: [guests]
+      summary: List guests (optionally filter active/all)
+      parameters:
+        - name: active
+          in: query
+          schema:
+            type: boolean
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of guests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Guest"
+    post:
+      operationId: createGuest
+      tags: [guests]
+      summary: Create a guest record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GuestInput"
+      responses:
+        "201":
+          description: Guest created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Guest"
+
+  /guests/{id}:
+    get:
+      operationId: getGuest
+      tags: [guests]
+      summary: Get a single guest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Guest detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Guest"
+        "404":
+          description: Guest not found
+    patch:
+      operationId: updateGuest
+      tags: [guests]
+      summary: Update guest info
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GuestUpdate"
+      responses:
+        "200":
+          description: Updated guest
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Guest"
+
+  /bookings:
+    get:
+      operationId: getBookings
+      tags: [bookings]
+      summary: List bookings (filter by status, date range)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [reserved, checked_in, checked_out, cancelled]
+        - name: room_id
+          in: query
+          schema:
+            type: integer
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+    post:
+      operationId: createBooking
+      tags: [bookings]
+      summary: Create a new booking / advance reservation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingInput"
+      responses:
+        "201":
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+
+  /bookings/{id}:
+    get:
+      operationId: getBooking
+      tags: [bookings]
+      summary: Get a single booking
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Booking detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "404":
+          description: Booking not found
+    patch:
+      operationId: updateBooking
+      tags: [bookings]
+      summary: Update booking details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingUpdate"
+      responses:
+        "200":
+          description: Updated booking
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+    delete:
+      operationId: deleteBooking
+      tags: [bookings]
+      summary: Cancel/delete a booking
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /bookings/{id}/checkin:
+    post:
+      operationId: checkIn
+      tags: [bookings]
+      summary: Check in a guest (changes status to checked_in)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckInInput"
+      responses:
+        "200":
+          description: Checked in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+
+  /bookings/{id}/checkout:
+    post:
+      operationId: checkOut
+      tags: [bookings]
+      summary: Check out a guest (changes status to checked_out)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckOutInput"
+      responses:
+        "200":
+          description: Checked out with receipt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckOutReceipt"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [reports]
+      summary: Real-time dashboard stats (total rooms, occupied, available, long stay count, occupancy rate)
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/today:
+    get:
+      operationId: getTodayActivity
+      tags: [reports]
+      summary: Today check-ins and check-outs
+      responses:
+        "200":
+          description: Today's activity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodayActivity"
+
+  /dashboard/alerts:
+    get:
+      operationId: getAlerts
+      tags: [reports]
+      summary: Rooms needing attention (expiring long stays, blocked rooms)
+      responses:
+        "200":
+          description: Alert list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RoomAlert"
+
+  /reports/daily:
+    get:
+      operationId: getDailyReport
+      tags: [reports]
+      summary: Daily report for a specific date
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Daily report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyReport"
+
+  /reports/monthly:
+    get:
+      operationId: getMonthlyReport
+      tags: [reports]
+      summary: Monthly report (occupancy rate, revenue, guest nationality breakdown)
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Monthly report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonthlyReport"
+
+  /reports/occupancy-chart:
+    get:
+      operationId: getOccupancyChart
+      tags: [reports]
+      summary: Weekly/monthly occupancy chart data
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [weekly, monthly]
+            default: weekly
+      responses:
+        "200":
+          description: Occupancy chart data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OccupancyDataPoint"
+
+  /activity:
+    get:
+      operationId: getActivityLog
+      tags: [activity]
+      summary: Staff activity log
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Activity log entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityLog"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +513,517 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    LoginInput:
+      type: object
+      properties:
+        pin:
+          type: string
+          minLength: 4
+          maxLength: 4
+      required:
+        - pin
+
+    AuthResult:
+      type: object
+      properties:
+        token:
+          type: string
+        staff:
+          type: string
+      required:
+        - token
+        - staff
+
+    Room:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        block:
+          type: string
+          enum: [A, C, D, E, G, facility]
+        type:
+          type: string
+          enum: [single, double, family]
+        stars:
+          type: integer
+          description: "1=Double Bed, 2=Family, 3=Long Stay/Big Room"
+        price_per_night:
+          type: integer
+        status:
+          type: string
+          enum: [available, occupied_regular, long_stay_japan, long_stay_local, blocked, facility]
+        notes:
+          type: ["string", "null"]
+        is_facility:
+          type: boolean
+      required:
+        - id
+        - number
+        - block
+        - type
+        - stars
+        - price_per_night
+        - status
+        - is_facility
+
+    RoomDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        block:
+          type: string
+        type:
+          type: string
+        stars:
+          type: integer
+        price_per_night:
+          type: integer
+        status:
+          type: string
+        notes:
+          type: ["string", "null"]
+        is_facility:
+          type: boolean
+        current_booking:
+          $ref: "#/components/schemas/Booking"
+          nullable: true
+      required:
+        - id
+        - number
+        - block
+        - type
+        - stars
+        - price_per_night
+        - status
+        - is_facility
+
+    RoomUpdate:
+      type: object
+      properties:
+        notes:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [available, occupied_regular, long_stay_japan, long_stay_local, blocked, facility]
+
+    Guest:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        id_number:
+          type: string
+        id_type:
+          type: string
+          enum: [ktp, passport]
+        nationality:
+          type: string
+        phone:
+          type: ["string", "null"]
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - id_number
+        - id_type
+        - nationality
+        - created_at
+
+    GuestInput:
+      type: object
+      properties:
+        name:
+          type: string
+        id_number:
+          type: string
+        id_type:
+          type: string
+          enum: [ktp, passport]
+        nationality:
+          type: string
+        phone:
+          type: string
+      required:
+        - name
+        - id_number
+        - id_type
+        - nationality
+
+    GuestUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        id_number:
+          type: string
+        id_type:
+          type: string
+        nationality:
+          type: string
+        phone:
+          type: ["string", "null"]
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: integer
+        room_id:
+          type: integer
+        room_number:
+          type: string
+        guest_id:
+          type: integer
+        guest_name:
+          type: string
+        guest_nationality:
+          type: string
+        check_in_date:
+          type: string
+          format: date
+        check_out_date:
+          type: string
+          format: date
+        actual_check_in:
+          type: ["string", "null"]
+          format: date-time
+        actual_check_out:
+          type: ["string", "null"]
+          format: date-time
+        status:
+          type: string
+          enum: [reserved, checked_in, checked_out, cancelled]
+        stay_type:
+          type: string
+          enum: [regular, long_stay]
+        price_per_night:
+          type: integer
+        total_amount:
+          type: ["integer", "null"]
+        deposit:
+          type: ["integer", "null"]
+        payment_method:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - room_id
+        - room_number
+        - guest_id
+        - guest_name
+        - guest_nationality
+        - check_in_date
+        - check_out_date
+        - status
+        - stay_type
+        - price_per_night
+        - created_at
+
+    BookingInput:
+      type: object
+      properties:
+        room_id:
+          type: integer
+        guest_id:
+          type: ["integer", "null"]
+        guest:
+          $ref: "#/components/schemas/GuestInput"
+        check_in_date:
+          type: string
+          format: date
+        check_out_date:
+          type: string
+          format: date
+        stay_type:
+          type: string
+          enum: [regular, long_stay]
+        price_per_night:
+          type: integer
+        deposit:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+      required:
+        - room_id
+        - check_in_date
+        - check_out_date
+        - stay_type
+        - price_per_night
+
+    BookingUpdate:
+      type: object
+      properties:
+        check_in_date:
+          type: string
+          format: date
+        check_out_date:
+          type: string
+          format: date
+        price_per_night:
+          type: integer
+        deposit:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [reserved, checked_in, checked_out, cancelled]
+
+    CheckInInput:
+      type: object
+      properties:
+        deposit:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+
+    CheckOutInput:
+      type: object
+      properties:
+        payment_method:
+          type: string
+          enum: [cash, transfer, card]
+        additional_charges:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+      required:
+        - payment_method
+
+    CheckOutReceipt:
+      type: object
+      properties:
+        booking:
+          $ref: "#/components/schemas/Booking"
+        nights:
+          type: integer
+        subtotal:
+          type: integer
+        additional_charges:
+          type: integer
+        deposit_paid:
+          type: integer
+        total_due:
+          type: integer
+        payment_method:
+          type: string
+      required:
+        - booking
+        - nights
+        - subtotal
+        - additional_charges
+        - deposit_paid
+        - total_due
+        - payment_method
+
+    DashboardSummary:
+      type: object
+      properties:
+        total_rooms:
+          type: integer
+        occupied:
+          type: integer
+        available:
+          type: integer
+        long_stay_japan:
+          type: integer
+        long_stay_local:
+          type: integer
+        blocked:
+          type: integer
+        occupancy_rate:
+          type: number
+        revenue_today:
+          type: integer
+        revenue_month:
+          type: integer
+      required:
+        - total_rooms
+        - occupied
+        - available
+        - long_stay_japan
+        - long_stay_local
+        - blocked
+        - occupancy_rate
+        - revenue_today
+        - revenue_month
+
+    TodayActivity:
+      type: object
+      properties:
+        check_ins:
+          type: array
+          items:
+            $ref: "#/components/schemas/Booking"
+        check_outs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Booking"
+      required:
+        - check_ins
+        - check_outs
+
+    RoomAlert:
+      type: object
+      properties:
+        room_id:
+          type: integer
+        room_number:
+          type: string
+        alert_type:
+          type: string
+          enum: [expiring_soon, overdue, blocked]
+        message:
+          type: string
+        days_remaining:
+          type: ["integer", "null"]
+      required:
+        - room_id
+        - room_number
+        - alert_type
+        - message
+
+    DailyReport:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        check_ins:
+          type: integer
+        check_outs:
+          type: integer
+        new_reservations:
+          type: integer
+        revenue:
+          type: integer
+        bookings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Booking"
+      required:
+        - date
+        - check_ins
+        - check_outs
+        - new_reservations
+        - revenue
+        - bookings
+
+    MonthlyReport:
+      type: object
+      properties:
+        year:
+          type: integer
+        month:
+          type: integer
+        total_revenue:
+          type: integer
+        avg_occupancy_rate:
+          type: number
+        total_guests:
+          type: integer
+        nationality_breakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/NationalityCount"
+        room_type_revenue:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoomTypeRevenue"
+      required:
+        - year
+        - month
+        - total_revenue
+        - avg_occupancy_rate
+        - total_guests
+        - nationality_breakdown
+        - room_type_revenue
+
+    NationalityCount:
+      type: object
+      properties:
+        nationality:
+          type: string
+        count:
+          type: integer
+      required:
+        - nationality
+        - count
+
+    RoomTypeRevenue:
+      type: object
+      properties:
+        type:
+          type: string
+        revenue:
+          type: integer
+        nights:
+          type: integer
+      required:
+        - type
+        - revenue
+        - nights
+
+    OccupancyDataPoint:
+      type: object
+      properties:
+        label:
+          type: string
+        date:
+          type: string
+        occupied:
+          type: integer
+        total:
+          type: integer
+        rate:
+          type: number
+      required:
+        - label
+        - date
+        - occupied
+        - total
+        - rate
+
+    ActivityLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        action:
+          type: string
+        description:
+          type: string
+        room_number:
+          type: ["string", "null"]
+        guest_name:
+          type: ["string", "null"]
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - action
+        - description
+        - created_at
