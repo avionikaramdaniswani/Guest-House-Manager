@@ -48,16 +48,20 @@ const SEPH = 28;
 
 const GCOLS = [SW, CVW, SW, ...Array(8).fill(NW)].map(x => `${x}px`).join(" ");
 
+const SH = 26; // separator row height
+
 const GROWS = [
-  /* 1   */ `${RH}px`,
-  /* 2   */ `${CHH}px`,
-  /* 3   */ `${RH}px`,
-  /* 4-13*/ ...Array(10).fill(`${RH}px`),
-  /* 14  */ `${SEPH}px`,
-  /* 15-24*/ ...Array(10).fill(`${RH}px`),
-  /* 25  */ `${RH}px`,
-  /* 26  */ `${CHH}px`,
-  /* 27  */ `${RH}px`,
+  /* 1    */ `${RH}px`,
+  /* 2    */ `${CHH}px`,
+  /* 3    */ `${RH}px`,
+  /* 4-12 */ ...Array(9).fill(`${RH}px`),   // Block C (header + 8 rooms)
+  /* 13   */ `${SH}px`,                       // separator row 1: Lobby + Office
+  /* 14   */ `${SH}px`,                       // separator row 2: Lobby full (label)
+  /* 15   */ `${SH}px`,                       // separator row 3: Lobby + Storage
+  /* 16-24*/ ...Array(9).fill(`${RH}px`),   // Block D/E (9 rooms)
+  /* 25   */ `${RH}px`,
+  /* 26   */ `${CHH}px`,
+  /* 27   */ `${RH}px`,
 ].join(" ");
 
 // ─── Status colors ─────────────────────────────────────────────
@@ -262,20 +266,18 @@ export default function FloorPlan() {
             {/* col2 row4 = top of Corridor C */}
             <FC lbl="Pantry"  col={3} row={4} />
 
-            {/* ══ CORRIDOR C — col 2, rows 4-13 ══ */}
-            <CV col={2} r1={4} r2={13} lbl="Corridor C" />
+            {/* ══ CORRIDOR C — col 2, rows 4-12 ══ */}
+            <CV col={2} r1={4} r2={12} lbl="Corridor C" />
 
-            {/* ══ BLOCK C LEFT (col 1, rows 5-13) ══ */}
+            {/* ══ BLOCK C LEFT (col 1, rows 5-12) ══ */}
             {([ ["18",5],["16",6],["14",7],["12",8],["10",9],["8",10],["6",11],["2",12] ] as [string,number][]).map(([n,r]) => (
               <RC key={`cL${n}`} n={n} col={1} row={r} />
             ))}
-            <div style={cs("1","13",{ background:LOBBY_BG })} />
 
-            {/* ══ BLOCK C RIGHT (col 3, rows 5-13) ══ */}
+            {/* ══ BLOCK C RIGHT (col 3, rows 5-12) ══ */}
             {([ ["19",5],["17",6],["15",7],["11",8],["7",9],["5",10],["3",11],["1",12] ] as [string,number][]).map(([n,r]) => (
               <RC key={`cR${n}`} n={n} col={3} row={r} />
             ))}
-            <FC lbl="Office" col={3} row={13} />
 
             {/* ══ LEGEND — cols 4-11, rows 4-24 ══ */}
             <div style={cs("4 / 12","4 / 25",{
@@ -298,26 +300,33 @@ export default function FloorPlan() {
               </div>
             </div>
 
-            {/* ══ SEPARATOR / MAIN LOBBY D — cols 1-3, row 14 ══ */}
+            {/* ══ MAIN LOBBY BLOK D — 3 separator rows (13, 14, 15) ══
+                row 13: Main Lobby (cols 1-2) | Office  (col 3)
+                row 14: Main Lobby full       (cols 1-3) — label row
+                row 15: Main Lobby (cols 1-2) | Storage (col 3)             */}
+            <div style={cs("1 / 3","13",{ background:"#ced4da" })} />
+            <FC lbl="Office"  col={3} row={13} />
+
             <div style={cs("1 / 4","14",{
               background:"#ced4da", fontSize:9, fontWeight:700, color:"#374151",
-              justifyContent:"flex-start", paddingLeft:8,
+              justifyContent:"flex-start", paddingLeft:8, gap:4,
             })}>
               ◀ Main Lobby Blok D
             </div>
 
-            {/* ══ CORRIDOR E — col 2, rows 15-24 ══ */}
-            <CV col={2} r1={15} r2={24} lbl="Corridor E" />
+            <div style={cs("1 / 3","15",{ background:"#ced4da" })} />
+            <FC lbl="Storage" col={3} row={15} />
 
-            {/* ══ BLOCK D/E LEFT (col 1, rows 15-24) ══ */}
-            {([ ["34",15],["36",16],["38",17],["40",18],["42",19],["44",20],["46",21],["48",22] ] as [string,number][]).map(([n,r]) => (
+            {/* ══ CORRIDOR E — col 2, rows 16-24 ══ */}
+            <CV col={2} r1={16} r2={24} lbl="Corridor E" />
+
+            {/* ══ BLOCK D/E LEFT (col 1, rows 16-24) ══ */}
+            {([ ["34",16],["36",17],["38",18],["40",19],["42",20],["44",21],["46",22],["48",23] ] as [string,number][]).map(([n,r]) => (
               <RC key={`dL${n}`} n={n} col={1} row={r} />
             ))}
-            <FC lbl="Panel Room" col={1} row={23} />
-            <div style={cs("1","24",{ background:LOBBY_BG })} />
+            <FC lbl="Panel Room" col={1} row={24} />
 
-            {/* ══ BLOCK D/E RIGHT (col 3, rows 15-24) ══ */}
-            <FC lbl="Storage"    col={3} row={15} />
+            {/* ══ BLOCK D/E RIGHT (col 3, rows 16-24) ══ */}
             {([ ["35",16],["37",17],["39",18],["41",19],["43",20],["45",21],["47",22],["49",23] ] as [string,number][]).map(([n,r]) => (
               <RC key={`dR${n}`} n={n} col={3} row={r} />
             ))}
