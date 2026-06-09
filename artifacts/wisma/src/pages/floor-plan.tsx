@@ -13,34 +13,41 @@ import { BedDouble, CheckCircle2, User } from "lucide-react";
 import type { Room } from "@workspace/api-client-react";
 
 // ─── Grid dimensions ───────────────────────────────────────────
-const RH  = 38;   // room cell height px
-const SW  = 70;   // narrow col width  (Block C / D-E)
-const NW  = 82;   // normal col width  (Block A / G)
-const CVW = 18;   // vertical corridor px
+//
+// 9 columns:
+//  col1 = SW  — Block C/E left rooms
+//  col2 = CVW — Corridor C / E (vertical label)
+//  col3 = SW  — Block C/E right rooms
+//  col4 = NW  — Kitchen / special column
+//  col5..9 = NW×5 — main room columns (20i,21,22..  / 51,52..)
+//
+// Rows (26 total):
+//  1        Block A top rooms
+//  2        Corridor BLOK A
+//  3-12     Block C (Storage/Pantry header + 8 room rows + Office row)
+//  13       Separator / Main Lobby Blok D
+//  14-23    Block D/E (Storage header + 8 room rows + ServerMID row)
+//  24       Block G top rooms
+//  25       Corridor G
+//  26       Block G bottom rooms
+//
+const SW  = 68;
+const CVW = 16;
+const NW  = 80;
+const RH  = 38;
+const CHH = 22;
+const SEPH = 30;
 
-// 9 columns: [left-rooms | corr-C | right-rooms | 6×A/G cols]
 const GCOLS = [SW, CVW, SW, NW, NW, NW, NW, NW, NW].map(x => `${x}px`).join(" ");
-
-// Rows:
-//  1        : Block A top row
-//  2        : Corridor A
-//  3–12     : Block C (Storage/Pantry row + 8 room rows + Office row)
-//  13       : Separator / Main Lobby Blok D
-//  14–23    : Block D/E (Storage row + 8 room rows + ServerMID row)
-//  24       : Block G top row
-//  25       : Corridor G
-//  26       : Block G bottom row
-const CHH  = 22;   // horizontal corridor height
-const SEPH = 30;   // separator height
 const GROWS = [
-  `${RH}px`, `${CHH}px`,
+  `${RH}px`,  `${CHH}px`,
   ...Array(10).fill(`${RH}px`),
   `${SEPH}px`,
   ...Array(10).fill(`${RH}px`),
   `${RH}px`, `${CHH}px`, `${RH}px`,
 ].join(" ");
 
-// ─── Status helpers ────────────────────────────────────────────
+// ─── Status colors ─────────────────────────────────────────────
 function sbg(s: string) {
   if (s === "available")         return "#ffffff";
   if (s === "occupied_regular")  return "#fde68a";
@@ -76,7 +83,7 @@ function TR({ lbl, desc }: { lbl: string; desc: string }) {
   );
 }
 
-// ─── Cell style helper (NO border — gap acts as the border) ────
+// ─── Cell style — NO border (gap handles borders) ──────────────
 function cs(
   col: string,
   row: string,
@@ -95,6 +102,10 @@ function cs(
   };
 }
 
+const LOBBY_BG   = "#e9ecef";
+const FACILITY_BG = "#dee2e6";
+const CORRIDOR_BG = "#f1f3f5";
+
 // ─── Main component ────────────────────────────────────────────
 export default function FloorPlan() {
   const { data: rooms, isLoading } = useGetRooms();
@@ -110,18 +121,15 @@ export default function FloorPlan() {
 
   const gr = (n: string) => rooms?.find(r => r.number === n);
 
-  // Room button
+  // ── Room cell ─────────────────────────────────────────────────
   const RC = ({ n, col, row }: { n: string; col: number; row: number }) => {
     const room = gr(n);
-    const bg = room ? sbg(room.status) : "#f9fafb";
-    const fg = room ? sfg(room.status) : "#9ca3af";
-    const stars = room?.stars ?? 0;
     return (
       <button
         onClick={() => room && setSelected(room)}
         style={cs(String(col), String(row), {
-          background: bg,
-          color: fg,
+          background: room ? sbg(room.status) : "#ffffff",
+          color: room ? sfg(room.status) : "#374151",
           cursor: room ? "pointer" : "default",
           flexDirection: "column",
           gap: 1,
@@ -129,52 +137,52 @@ export default function FloorPlan() {
         })}
       >
         <span style={{ fontWeight: 800, fontSize: 11, lineHeight: 1 }}>{n}</span>
-        {stars > 0 && <span style={{ fontSize: 8, lineHeight: 1 }}>{"★".repeat(stars)}</span>}
+        {(room?.stars ?? 0) > 0 && (
+          <span style={{ fontSize: 8, lineHeight: 1 }}>{"★".repeat(room!.stars)}</span>
+        )}
       </button>
     );
   };
 
-  // Facility / label cell (gray)
-  const FC = ({ lbl, col, row, span }: { lbl: string; col: string; row: string; span?: React.CSSProperties }) => (
+  // ── Facility cell (gray) ───────────────────────────────────────
+  const FC = ({ lbl, col, row }: { lbl: string; col: string; row: string }) => (
     <div style={cs(col, row, {
-      background: "#e5e7eb",
-      fontSize: 9,
-      fontWeight: 700,
-      color: "#374151",
-      textAlign: "center",
-      padding: "0 3px",
-      lineHeight: 1.2,
-      ...span,
+      background: FACILITY_BG,
+      fontSize: 9, fontWeight: 700, color: "#374151",
+      textAlign: "center", padding: "0 3px", lineHeight: 1.2,
     })}>
       {lbl}
     </div>
   );
 
-  // Blank white cell
-  const EC = ({ col, row }: { col: number; row: number }) => (
-    <div style={cs(String(col), String(row), { background: "white" })} />
-  );
-
-  // Vertical corridor
+  // ── Vertical corridor ─────────────────────────────────────────
   const CV = ({ col, r1, r2, lbl }: { col: number; r1: number; r2: number; lbl: string }) => (
-    <div style={cs(String(col), `${r1} / ${r2 + 1}`, { background: "#f3f4f6" })}>
+    <div style={cs(String(col), `${r1} / ${r2 + 1}`, { background: CORRIDOR_BG })}>
       <span style={{
-        writingMode: "vertical-rl",
-        transform: "rotate(180deg)",
+        writingMode: "vertical-rl", transform: "rotate(180deg)",
         fontSize: 8, color: "#6b7280", fontWeight: 700, letterSpacing: 2,
-      }}>
-        {lbl}
-      </span>
+      }}>{lbl}</span>
     </div>
   );
 
-  // Horizontal corridor
+  // ── Horizontal corridor ───────────────────────────────────────
   const CH = ({ c1, c2, row, lbl }: { c1: number; c2: number; row: number; lbl: string }) => (
     <div style={cs(`${c1} / ${c2 + 1}`, String(row), {
-      background: "#e9ecef",
+      background: CORRIDOR_BG,
       fontSize: 9, fontWeight: 700, color: "#6b7280", letterSpacing: 1,
     })}>
       {lbl}
+    </div>
+  );
+
+  // ── Lobby block (large labeled cell) ──────────────────────────
+  const Lobby = ({ col, row, label }: { col: string; row: string; label: string }) => (
+    <div style={cs(col, row, {
+      background: LOBBY_BG, fontWeight: 700, fontSize: 12, color: "#374151",
+      flexDirection: "column", gap: 2,
+    })}>
+      <span style={{ fontSize: 8, color: "#9ca3af" }}>◤</span>
+      <span>{label}</span>
     </div>
   );
 
@@ -183,7 +191,7 @@ export default function FloorPlan() {
 
   return (
     <div className="space-y-3 h-full flex flex-col">
-      {/* ── Title + Legend bar ── */}
+      {/* ── Title + Legend ── */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-xl font-bold text-primary">Denah Wisma Eucaliptus / Guest House Deluxe</h1>
@@ -205,94 +213,81 @@ export default function FloorPlan() {
         </div>
       </div>
 
-      {/* ── Floor Plan Grid ── */}
+      {/* ── Floor Plan ── */}
       <div className="flex-1 overflow-auto">
         <div style={{ padding: 16, background: "white", width: "fit-content", border: "1px solid #e5e7eb", borderRadius: 8 }}>
-
           {/*
-            GRID — gap:1px + dark background = single-pixel borders between all cells.
-            No individual `border` on cells needed.
+            KEY FIX: gap:1px + background = single-pixel dividers.
+            Every grid area must have an explicit cell to avoid dark gaps.
+
+            Lobby B spans cols 1-4 (NOT 1-3) in row1, covering the blank
+            above Kitchen — that eliminates the "ruang kosong" empty box.
+            Lobby B cols 1-3 in row2 sits next to Corridor A (cols 4-9 row2).
           */}
           <div style={{
             display: "grid",
             gridTemplateColumns: GCOLS,
             gridTemplateRows: GROWS,
             gap: "1px",
-            background: "#374151",   /* gap color = the "border" between cells */
-            border: "2px solid #374151",
+            background: "#495057",
+            border: "2px solid #495057",
           }}>
 
-            {/* ══ LOBBY B — cols 1-3, rows 1-2 ══ */}
-            <div style={cs("1 / 4", "1 / 3", {
-              background: "#f3f4f6", fontWeight: 700, fontSize: 12, color: "#374151",
-              flexDirection: "column", gap: 2,
-            })}>
-              <span style={{ fontSize: 8, color: "#9ca3af" }}>◤</span>
-              <span>Lobby B</span>
-            </div>
+            {/* ══ LOBBY B ══
+                Row1: spans cols 1-4 (covers blank above Kitchen — no empty box!)
+                Row2: spans cols 1-3 (below Lobby B label, next to Corridor A) */}
+            <Lobby col="1 / 5" row="1" label="Lobby B" />
+            <div style={cs("1 / 4", "2", { background: LOBBY_BG })} />
 
-            {/* ══ BLOCK A TOP ROW — row 1 (col 4 empty, rooms 21-33) ══ */}
-            <EC col={4} row={1} />
+            {/* ══ BLOCK A TOP ROW (row 1) — rooms start at col5 ══ */}
             <RC n="21" col={5} row={1} />
             <RC n="23" col={6} row={1} />
             <RC n="27" col={7} row={1} />
             <RC n="31" col={8} row={1} />
             <RC n="33" col={9} row={1} />
 
-            {/* ══ CORRIDOR A — cols 4-9, row 2 ══ */}
+            {/* ══ CORRIDOR A (row 2) — cols 4-9 ══ */}
             <CH c1={4} c2={9} row={2} lbl="Coridor BLOK A" />
 
-            {/* ══ ROW 3: Block C header + Block A bottom row ══ */}
-            <FC lbl="Storage"  col="1" row="3" />
-            {/* col 2 = Corridor C — handled below */}
-            <FC lbl="Pantry"   col="3" row="3" />
-            <FC lbl="Kitchen"  col="4" row="3" />
-            <FC lbl="20i"      col="5" row="3" />
-            <RC  n="22"        col={6} row={3} />
-            <RC  n="24"        col={7} row={3} />
-            <RC  n="30"        col={8} row={3} />
-            <FC lbl="Laundry"  col="9" row="3" />
+            {/* ══ BLOCK A BOTTOM ROW (row 3) + Block C headers ══ */}
+            <FC lbl="Storage"  col="1"   row="3" />
+            {/* col2 row3 = top of Corridor C — rendered in CV below */}
+            <FC lbl="Pantry"   col="3"   row="3" />
+            <FC lbl="Kitchen"  col="4"   row="3" />
+            <FC lbl="20i"      col="5"   row="3" />
+            <RC  n="22"        col={6}   row={3} />
+            <RC  n="24"        col={7}   row={3} />
+            <RC  n="30"        col={8}   row={3} />
+            <FC lbl="Laundry"  col="9"   row="3" />
 
             {/* ══ CORRIDOR C — col 2, rows 3-12 ══ */}
             <CV col={2} r1={3} r2={12} lbl="Corridor C" />
 
-            {/* ══ BLOCK C LEFT COL — col 1, rows 4-11 (8 rooms) ══ */}
+            {/* ══ BLOCK C LEFT COL — col 1, rows 4-12 ══ */}
             {([ ["18",4],["16",5],["14",6],["12",7],["10",8],["8",9],["6",10],["2",11] ] as [string,number][]).map(([n,r]) => (
               <RC key={`cL${n}`} n={n} col={1} row={r} />
             ))}
-            <EC col={1} row={12} />
+            <div style={cs("1", "12", { background: LOBBY_BG })} /> {/* blank below room 2 */}
 
-            {/* ══ BLOCK C RIGHT COL — col 3, rows 4-12 (8 rooms + Office) ══ */}
+            {/* ══ BLOCK C RIGHT COL — col 3, rows 4-12 ══ */}
             {([ ["19",4],["17",5],["15",6],["11",7],["7",8],["5",9],["3",10],["1",11] ] as [string,number][]).map(([n,r]) => (
               <RC key={`cR${n}`} n={n} col={3} row={r} />
             ))}
             <FC lbl="Office" col="3" row="12" />
 
-            {/* ══ SEPARATOR / LOBBY D — cols 1-3, row 13 ══ */}
-            <div style={cs("1 / 4", "13", {
-              background: "#d1d5db",
-              fontSize: 9, fontWeight: 700, color: "#374151",
-              justifyContent: "flex-start", paddingLeft: 8,
-            })}>
-              ◀ Main Lobby Blok D
-            </div>
-
-            {/* ══ LEGEND — cols 4-9, rows 3-23 ══ */}
+            {/* ══ LEGEND — cols 4-9, rows 3-23 (large center area) ══ */}
             <div style={cs("4 / 10", "4 / 24", {
-              background: "white",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 0,
-              padding: 24,
+              background: "white", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
+              gap: 0, padding: 28,
             })}>
-              <p style={{ fontWeight: 900, fontSize: 17, color: "#374151", textAlign: "center", letterSpacing: 0.5, margin: 0 }}>
+              <p style={{ fontWeight: 900, fontSize: 18, color: "#374151", textAlign: "center", margin: 0 }}>
                 GUEST HOUSE DELUXE
               </p>
-              <p style={{ fontWeight: 900, fontSize: 17, color: "#374151", textAlign: "center", letterSpacing: 0.5, marginBottom: 16, marginTop: 0 }}>
+              <p style={{ fontWeight: 900, fontSize: 18, color: "#374151", textAlign: "center", marginTop: 0, marginBottom: 18 }}>
                 BLOCK PLAN
               </p>
-              <p style={{ fontWeight: 700, fontSize: 12, color: "#374151", marginBottom: 8 }}>Note : 2026</p>
+              <p style={{ fontWeight: 700, fontSize: 12, color: "#374151", marginBottom: 10 }}>Note : 2026</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 18 }}>
                 <LR color="#f97316" label="Long Stay  8 room***  Japan" />
                 <LR color="#3b82f6" label="Long Stay  2 room***  Local" />
@@ -305,6 +300,14 @@ export default function FloorPlan() {
               </div>
             </div>
 
+            {/* ══ SEPARATOR / LOBBY D (row 13) ══ */}
+            <div style={cs("1 / 4", "13", {
+              background: "#ced4da", fontSize: 9, fontWeight: 700, color: "#374151",
+              justifyContent: "flex-start", paddingLeft: 8,
+            })}>
+              ◀ Main Lobby Blok D
+            </div>
+
             {/* ══ CORRIDOR E — col 2, rows 14-23 ══ */}
             <CV col={2} r1={14} r2={23} lbl="Corridor E" />
 
@@ -313,37 +316,31 @@ export default function FloorPlan() {
               <RC key={`dL${n}`} n={n} col={1} row={r} />
             ))}
             <FC lbl="Panel Room" col="1" row="22" />
-            <EC col={1} row={23} />
+            <div style={cs("1", "23", { background: LOBBY_BG })} />
 
             {/* ══ BLOCK D/E RIGHT COL — col 3, rows 14-23 ══ */}
-            <FC lbl="Storage" col="3" row="14" />
+            <FC lbl="Storage"    col="3" row="14" />
             {([ ["35",15],["37",16],["39",17],["41",18],["43",19],["45",20],["47",21],["49",22] ] as [string,number][]).map(([n,r]) => (
               <RC key={`dR${n}`} n={n} col={3} row={r} />
             ))}
             <FC lbl="Server MID" col="3" row="23" />
 
-            {/* ══ LOBBY F — cols 1-3, rows 24-25 ══ */}
-            <div style={cs("1 / 4", "24 / 26", {
-              background: "#f3f4f6", fontWeight: 700, fontSize: 12, color: "#374151",
-              flexDirection: "column", gap: 2,
-            })}>
-              <span style={{ fontSize: 8, color: "#9ca3af" }}>◤</span>
-              <span>Lobby Blok F</span>
-            </div>
+            {/* ══ LOBBY F — cols 1-3, rows 24-26 (full G-block height) ══ */}
+            <Lobby col="1 / 4" row="24 / 27" label="Lobby Blok F" />
 
-            {/* ══ BLOCK G TOP ROW — row 24 ══ */}
+            {/* ══ BLOCK G TOP ROW (row 24) ══ */}
             <FC lbl="Kitchen" col="4" row="24" />
-            <RC n="50" col={5} row={24} />
-            <RC n="52" col={6} row={24} />
-            <RC n="54" col={7} row={24} />
-            <RC n="60" col={8} row={24} />
+            <RC n="50"        col={5} row={24} />
+            <RC n="52"        col={6} row={24} />
+            <RC n="54"        col={7} row={24} />
+            <RC n="60"        col={8} row={24} />
             <FC lbl="Laundry" col="9" row="24" />
 
-            {/* ══ CORRIDOR G — cols 4-9, row 25 ══ */}
+            {/* ══ CORRIDOR G (row 25) — cols 4-9 ══ */}
             <CH c1={4} c2={9} row={25} lbl="Coridor Blok G" />
 
-            {/* ══ BLOCK G BOTTOM ROW — row 26 ══ */}
-            <EC col={4} row={26} />
+            {/* ══ BLOCK G BOTTOM ROW (row 26) — col4 blank, rooms col5-9 ══ */}
+            <div style={cs("4", "26", { background: LOBBY_BG })} />
             <RC n="51" col={5} row={26} />
             <RC n="53" col={6} row={26} />
             <RC n="55" col={7} row={26} />
