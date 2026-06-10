@@ -348,13 +348,12 @@ export default function FloorPlan() {
             <CH c1={4} c2={11} row={26} lbl="Coridor Blok G" />
 
             {/* ══ BLOCK G BOTTOM (row 27) ══
-                [blank](1) | 51*(2) | 53*(3) | 55***(4-5) | 61***(6-7) | 63***(8) */}
-            <div style={cs("4","27",{ background:LOBBY_BG })} />
-            <RC n="51" col={5}  row={27} />
-            <RC n="53" col={6}  row={27} />
-            <RC n="55" col={7}  row={27} span={2} />
-            <RC n="61" col={9}  row={27} span={2} />
-            <RC n="63" col={11} row={27} />
+                51*(1) | 53*(2) | 55**(3-4) | 61***(5-6) | 62***(7-8) */}
+            <RC n="51" col={4}  row={27} />
+            <RC n="53" col={5}  row={27} />
+            <RC n="55" col={6}  row={27} span={2} />
+            <RC n="61" col={8}  row={27} span={2} />
+            <RC n="62" col={10} row={27} span={2} />
 
           </div>
         </div>
