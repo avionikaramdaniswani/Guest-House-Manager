@@ -22,7 +22,7 @@ export default function Guests() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-primary flex items-center gap-3">
           <Users className="w-8 h-8" />
-          Guests Directory
+          Direktori Tamu
         </h1>
       </div>
 
@@ -31,7 +31,7 @@ export default function Guests() {
           <div className="relative w-80">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by name, ID, or nationality..."
+              placeholder="Cari nama, ID, atau kebangsaan..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8"
@@ -42,21 +42,21 @@ export default function Guests() {
           <Table>
             <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
               <TableRow>
-                <TableHead>Guest Name</TableHead>
-                <TableHead>Nationality</TableHead>
-                <TableHead>ID Type & Number</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Registered</TableHead>
+                <TableHead>Nama Tamu</TableHead>
+                <TableHead>Kebangsaan</TableHead>
+                <TableHead>Tipe & Nomor ID</TableHead>
+                <TableHead>Telepon</TableHead>
+                <TableHead>Terdaftar</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Loading guests...</TableCell>
+                  <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Memuat data tamu...</TableCell>
                 </TableRow>
               ) : filteredGuests?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">No guests found.</TableCell>
+                  <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Tidak ada tamu ditemukan.</TableCell>
                 </TableRow>
               ) : (
                 filteredGuests?.map(guest => (

@@ -12,7 +12,7 @@ export default function Settings() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-primary flex items-center gap-3">
           <SettingsIcon className="w-8 h-8" />
-          Settings & Logs
+          Pengaturan & Log
         </h1>
       </div>
 
@@ -21,29 +21,29 @@ export default function Settings() {
           <CardHeader className="border-b sticky top-0 bg-card z-10 pb-4">
             <CardTitle className="flex items-center gap-2">
               <History className="w-5 h-5" />
-              Activity Log
+              Log Aktivitas
             </CardTitle>
-            <CardDescription>Recent system actions and changes</CardDescription>
+            <CardDescription>Aksi dan perubahan sistem terbaru</CardDescription>
           </CardHeader>
           <CardContent className="p-0 overflow-auto">
             <Table>
               <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur-sm z-10 shadow-sm">
                 <TableRow>
-                  <TableHead className="w-[180px]">Date & Time</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Room</TableHead>
-                  <TableHead>Guest</TableHead>
-                  <TableHead>Details</TableHead>
+                  <TableHead className="w-[180px]">Tanggal & Waktu</TableHead>
+                  <TableHead>Aksi</TableHead>
+                  <TableHead>Kamar</TableHead>
+                  <TableHead>Tamu</TableHead>
+                  <TableHead>Keterangan</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Loading activity log...</TableCell>
+                    <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Memuat log aktivitas...</TableCell>
                   </TableRow>
                 ) : logs?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">No activity recorded.</TableCell>
+                    <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Belum ada aktivitas tercatat.</TableCell>
                   </TableRow>
                 ) : (
                   logs?.map((log) => (

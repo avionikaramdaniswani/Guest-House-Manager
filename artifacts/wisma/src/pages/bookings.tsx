@@ -29,10 +29,10 @@ export default function Bookings() {
 
   const getStatusBadge = (status: string) => {
     switch(status) {
-      case 'reserved': return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Reserved</Badge>;
-      case 'checked_in': return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Checked In</Badge>;
-      case 'checked_out': return <Badge variant="secondary">Checked Out</Badge>;
-      case 'cancelled': return <Badge variant="destructive">Cancelled</Badge>;
+      case 'reserved': return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Reservasi</Badge>;
+      case 'checked_in': return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Check-in</Badge>;
+      case 'checked_out': return <Badge variant="secondary">Check-out</Badge>;
+      case 'cancelled': return <Badge variant="destructive">Dibatalkan</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
     }
   };
@@ -42,11 +42,11 @@ export default function Bookings() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-primary flex items-center gap-3">
           <CalendarDays className="w-8 h-8" />
-          Bookings
+          Pemesanan
         </h1>
         <Button>
           <Plus className="w-4 h-4 mr-2" />
-          New Booking
+          Tambah Pemesanan
         </Button>
       </div>
 
@@ -56,7 +56,7 @@ export default function Bookings() {
             <div className="relative w-64">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search guest or room..."
+                placeholder="Cari tamu atau kamar..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-8"
@@ -64,14 +64,14 @@ export default function Bookings() {
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
+                <SelectValue placeholder="Filter status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="reserved">Reserved</SelectItem>
-                <SelectItem value="checked_in">Checked In</SelectItem>
-                <SelectItem value="checked_out">Checked Out</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="all">Semua Status</SelectItem>
+                <SelectItem value="reserved">Reservasi</SelectItem>
+                <SelectItem value="checked_in">Check-in</SelectItem>
+                <SelectItem value="checked_out">Check-out</SelectItem>
+                <SelectItem value="cancelled">Dibatalkan</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -81,23 +81,23 @@ export default function Bookings() {
             <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
               <TableRow>
                 <TableHead>ID</TableHead>
-                <TableHead>Guest</TableHead>
-                <TableHead>Room</TableHead>
+                <TableHead>Tamu</TableHead>
+                <TableHead>Kamar</TableHead>
                 <TableHead>Check In</TableHead>
                 <TableHead>Check Out</TableHead>
-                <TableHead>Type</TableHead>
+                <TableHead>Tipe</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Price/Night</TableHead>
+                <TableHead className="text-right">Harga/Malam</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Loading bookings...</TableCell>
+                  <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Memuat data pemesanan...</TableCell>
                 </TableRow>
               ) : filteredBookings?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">No bookings found.</TableCell>
+                  <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Tidak ada pemesanan ditemukan.</TableCell>
                 </TableRow>
               ) : (
                 filteredBookings?.map(booking => (
@@ -116,7 +116,7 @@ export default function Bookings() {
                       {booking.stay_type === 'long_stay' ? (
                         <Badge variant="secondary" className="text-xs">Long Stay</Badge>
                       ) : (
-                        <span className="text-xs text-muted-foreground">Regular</span>
+                        <span className="text-xs text-muted-foreground">Reguler</span>
                       )}
                     </TableCell>
                     <TableCell>{getStatusBadge(booking.status)}</TableCell>

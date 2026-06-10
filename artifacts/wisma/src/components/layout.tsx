@@ -30,11 +30,11 @@ export function Layout({ children }: LayoutProps) {
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/floor-plan", label: "Floor Plan", icon: Map },
-    { href: "/bookings", label: "Bookings", icon: CalendarDays },
-    { href: "/guests", label: "Guests", icon: Users },
-    { href: "/reports", label: "Reports", icon: BarChart3 },
-    { href: "/settings", label: "Settings", icon: Settings },
+    { href: "/floor-plan", label: "Denah Lantai", icon: Map },
+    { href: "/bookings", label: "Pemesanan", icon: CalendarDays },
+    { href: "/guests", label: "Tamu", icon: Users },
+    { href: "/reports", label: "Laporan", icon: BarChart3 },
+    { href: "/settings", label: "Pengaturan", icon: Settings },
   ];
 
   return (
@@ -63,7 +63,7 @@ export function Layout({ children }: LayoutProps) {
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           >
             {theme === 'dark' ? <Sun className="w-5 h-5 mr-3" /> : <Moon className="w-5 h-5 mr-3" />}
-            {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+            {theme === 'dark' ? 'Mode Terang' : 'Mode Gelap'}
           </Button>
           <Button 
             variant="ghost" 
@@ -71,7 +71,7 @@ export function Layout({ children }: LayoutProps) {
             onClick={handleLogout}
           >
             <LogOut className="w-5 h-5 mr-3" />
-            Logout
+            Keluar
           </Button>
         </div>
       </aside>
