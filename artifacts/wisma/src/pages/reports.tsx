@@ -140,7 +140,11 @@ export default function Reports() {
                           <tr key={booking.id} className="border-b last:border-0">
                             <td className="py-3 font-medium">{booking.room_number}</td>
                             <td className="py-3">{booking.guest_name}</td>
-                            <td className="py-3">{booking.stay_type === 'long_stay' ? 'Long Stay' : 'Reguler'}</td>
+                            <td className="py-3">
+                              {booking.stay_type === 'long_stay_japan' ? 'Long Stay Jepang'
+                               : booking.stay_type === 'long_stay_local' ? 'Long Stay Lokal'
+                               : 'Reguler'}
+                            </td>
                             <td className="py-3">
                               <span className={`px-2 py-1 rounded text-xs ${
                                 booking.status === 'checked_in' ? 'bg-green-100 text-green-700' :

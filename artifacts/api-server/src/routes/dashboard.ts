@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, gte, lte, sql } from "drizzle-orm";
+import { eq, and, lte } from "drizzle-orm";
 import { db, roomsTable, bookingsTable, guestsTable, activityLogsTable } from "@workspace/db";
 import {
   GetDashboardSummaryResponse,
@@ -40,56 +40,40 @@ router.get("/dashboard/today", async (_req, res): Promise<void> => {
   const checkIns = await db
     .select()
     .from(bookingsTable)
-    .where(
-      and(
-        eq(bookingsTable.status, "checked_in"),
-        eq(bookingsTable.checkInDate, today)
-      )
-    );
+    .where(and(eq(bookingsTable.status, "checked_in"), eq(bookingsTable.checkInDate, today)));
 
   const checkOuts = await db
     .select()
     .from(bookingsTable)
-    .where(
-      and(
-        eq(bookingsTable.status, "checked_out"),
-        eq(bookingsTable.checkOutDate, today)
-      )
-    );
+    .where(and(eq(bookingsTable.status, "checked_out"), eq(bookingsTable.checkOutDate, today)));
 
   async function enrichBookings(bookings: typeof bookingsTable.$inferSelect[]) {
     return Promise.all(bookings.map(async (b) => {
       const [guest] = await db.select().from(guestsTable).where(eq(guestsTable.id, b.guestId));
-      const [room] = await db.select().from(roomsTable).where(eq(roomsTable.id, b.roomId));
+      const [room]  = await db.select().from(roomsTable).where(eq(roomsTable.id, b.roomId));
       return {
         id: b.id,
         room_id: b.roomId,
         room_number: room?.number ?? "",
         guest_id: b.guestId,
         guest_name: guest?.name ?? "",
-        guest_nationality: guest?.nationality ?? "",
+        guest_company: guest?.company ?? null,
         check_in_date: b.checkInDate,
         check_out_date: b.checkOutDate,
         actual_check_in: b.actualCheckIn?.toISOString() ?? null,
         actual_check_out: b.actualCheckOut?.toISOString() ?? null,
         status: b.status,
         stay_type: b.stayType,
-        price_per_night: b.pricePerNight,
-        total_amount: b.totalAmount ?? null,
-        deposit: b.deposit ?? null,
-        payment_method: b.paymentMethod ?? null,
+        occupied_persons: b.occupiedPersons,
         notes: b.notes ?? null,
         created_at: b.createdAt.toISOString(),
       };
     }));
   }
 
-  const checkInsResult = await enrichBookings(checkIns);
-  const checkOutsResult = await enrichBookings(checkOuts);
-
   res.json(GetTodayActivityResponse.parse({
-    check_ins: checkInsResult,
-    check_outs: checkOutsResult,
+    check_ins: await enrichBookings(checkIns),
+    check_outs: await enrichBookings(checkOuts),
   }));
 });
 
@@ -104,31 +88,30 @@ router.get("/dashboard/alerts", async (_req, res): Promise<void> => {
 
   const today = new Date();
   const in7Days = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-  const todayStr = today.toISOString().split("T")[0];
 
-  // Expiring long stays
+  // Expiring long stays (both Japan and local)
   const expiringBookings = await db
     .select({
       bookingId: bookingsTable.id,
       roomId: bookingsTable.roomId,
       checkOutDate: bookingsTable.checkOutDate,
-      status: bookingsTable.status,
       stayType: bookingsTable.stayType,
-      guestId: bookingsTable.guestId,
     })
     .from(bookingsTable)
     .where(
       and(
         eq(bookingsTable.status, "checked_in"),
-        eq(bookingsTable.stayType, "long_stay"),
         lte(bookingsTable.checkOutDate, in7Days)
       )
     );
 
-  for (const b of expiringBookings) {
+  const longStayExpiring = expiringBookings.filter(b =>
+    b.stayType === "long_stay_japan" || b.stayType === "long_stay_local"
+  );
+
+  for (const b of longStayExpiring) {
     const [room] = await db.select().from(roomsTable).where(eq(roomsTable.id, b.roomId));
-    const checkOutDate = new Date(b.checkOutDate);
-    const daysRemaining = Math.ceil((checkOutDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const daysRemaining = Math.ceil((new Date(b.checkOutDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     alerts.push({
       room_id: b.roomId,
       room_number: room?.number ?? "",
@@ -141,11 +124,7 @@ router.get("/dashboard/alerts", async (_req, res): Promise<void> => {
   }
 
   // Blocked rooms
-  const blockedRooms = await db
-    .select()
-    .from(roomsTable)
-    .where(eq(roomsTable.status, "blocked"));
-
+  const blockedRooms = await db.select().from(roomsTable).where(eq(roomsTable.status, "blocked"));
   for (const room of blockedRooms) {
     alerts.push({
       room_id: room.id,

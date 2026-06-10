@@ -6,9 +6,9 @@ export const guestsTable = pgTable("guests", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   company: text("company"),
-  idNumber: text("id_number").notNull(),
-  idType: text("id_type").notNull(),        // ktp, passport
-  nationality: text("nationality").notNull(),
+  idNumber: text("id_number"),
+  idType: text("id_type"),
+  nationality: text("nationality"),
   phone: text("phone"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

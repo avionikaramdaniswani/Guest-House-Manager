@@ -20,7 +20,6 @@ async function enrichBookings(bookings: typeof bookingsTable.$inferSelect[]) {
       guest_id: b.guestId,
       guest_name: guest?.name ?? "",
       guest_company: guest?.company ?? null,
-      guest_nationality: guest?.nationality ?? "",
       check_in_date: b.checkInDate,
       check_out_date: b.checkOutDate,
       actual_check_in: b.actualCheckIn?.toISOString() ?? null,
@@ -36,34 +35,18 @@ async function enrichBookings(bookings: typeof bookingsTable.$inferSelect[]) {
 
 router.get("/reports/daily", async (req, res): Promise<void> => {
   const { date } = req.query as { date?: string };
-  if (!date) {
-    res.status(400).json({ error: "date parameter required" });
-    return;
-  }
+  if (!date) { res.status(400).json({ error: "date parameter required" }); return; }
 
   const checkInsRows = await db
-    .select()
-    .from(bookingsTable)
-    .where(
-      and(
-        eq(bookingsTable.checkInDate, date),
-        eq(bookingsTable.status, "checked_in")
-      )
-    );
+    .select().from(bookingsTable)
+    .where(and(eq(bookingsTable.checkInDate, date), eq(bookingsTable.status, "checked_in")));
 
   const checkOutsRows = await db
-    .select()
-    .from(bookingsTable)
-    .where(
-      and(
-        eq(bookingsTable.checkOutDate, date),
-        eq(bookingsTable.status, "checked_out")
-      )
-    );
+    .select().from(bookingsTable)
+    .where(and(eq(bookingsTable.checkOutDate, date), eq(bookingsTable.status, "checked_out")));
 
   const reservationsRows = await db
-    .select()
-    .from(bookingsTable)
+    .select().from(bookingsTable)
     .where(eq(bookingsTable.checkInDate, date));
 
   const allBookings = await enrichBookings([...checkInsRows, ...checkOutsRows]);
@@ -79,10 +62,7 @@ router.get("/reports/daily", async (req, res): Promise<void> => {
 
 router.get("/reports/monthly", async (req, res): Promise<void> => {
   const { year, month } = req.query as { year?: string; month?: string };
-  if (!year || !month) {
-    res.status(400).json({ error: "year and month required" });
-    return;
-  }
+  if (!year || !month) { res.status(400).json({ error: "year and month required" }); return; }
 
   const y = parseInt(year, 10);
   const m = parseInt(month, 10);
@@ -90,32 +70,34 @@ router.get("/reports/monthly", async (req, res): Promise<void> => {
   const lastDay  = new Date(y, m, 0).toISOString().split("T")[0];
 
   const checkouts = await db
-    .select()
-    .from(bookingsTable)
-    .where(
-      and(
-        eq(bookingsTable.status, "checked_out"),
-        gte(bookingsTable.checkOutDate, firstDay),
-        lte(bookingsTable.checkOutDate, lastDay)
-      )
-    );
+    .select().from(bookingsTable)
+    .where(and(
+      eq(bookingsTable.status, "checked_out"),
+      gte(bookingsTable.checkOutDate, firstDay),
+      lte(bookingsTable.checkOutDate, lastDay)
+    ));
 
   const totalGuests = checkouts.length;
 
-  const nationalityMap = new Map<string, number>();
+  // Stay type breakdown instead of nationality
+  const stayTypeMap = new Map<string, number>();
   for (const b of checkouts) {
-    const [guest] = await db.select().from(guestsTable).where(eq(guestsTable.id, b.guestId));
-    const nat = guest?.nationality ?? "Unknown";
-    nationalityMap.set(nat, (nationalityMap.get(nat) ?? 0) + 1);
+    const label = b.stayType === "long_stay_japan" ? "Long Stay Jepang"
+                : b.stayType === "long_stay_local" ? "Long Stay Lokal"
+                : "Reguler";
+    stayTypeMap.set(label, (stayTypeMap.get(label) ?? 0) + 1);
   }
-  const nationalityBreakdown = Array.from(nationalityMap.entries()).map(([nationality, count]) => ({
+  const nationalityBreakdown = Array.from(stayTypeMap.entries()).map(([nationality, count]) => ({
     nationality,
     count,
   }));
 
-  const totalRoomCount = await db.select().from(roomsTable).where(eq(roomsTable.isFacility, false)).then(r => r.length);
+  const totalRoomCount = await db
+    .select().from(roomsTable)
+    .where(eq(roomsTable.isFacility, false))
+    .then(r => r.length);
   const avgOccupancyRate = totalRoomCount > 0
-    ? Math.round((totalGuests / (totalRoomCount * 30 / 30)) * 100) / 100
+    ? Math.round((totalGuests / totalRoomCount) * 100) / 100
     : 0;
 
   res.json(GetMonthlyReportResponse.parse({
@@ -132,8 +114,7 @@ router.get("/reports/occupancy-chart", async (req, res): Promise<void> => {
   const today = new Date();
 
   const totalRooms = await db
-    .select()
-    .from(roomsTable)
+    .select().from(roomsTable)
     .where(eq(roomsTable.isFacility, false))
     .then(r => r.length);
 
@@ -146,15 +127,12 @@ router.get("/reports/occupancy-chart", async (req, res): Promise<void> => {
     const dateStr = date.toISOString().split("T")[0];
 
     const occupiedCount = await db
-      .select()
-      .from(bookingsTable)
-      .where(
-        and(
-          lte(bookingsTable.checkInDate, dateStr),
-          gte(bookingsTable.checkOutDate, dateStr),
-          sql`${bookingsTable.status} IN ('checked_in', 'checked_out', 'reserved')`
-        )
-      )
+      .select().from(bookingsTable)
+      .where(and(
+        lte(bookingsTable.checkInDate, dateStr),
+        gte(bookingsTable.checkOutDate, dateStr),
+        sql`${bookingsTable.status} IN ('checked_in', 'checked_out', 'reserved')`
+      ))
       .then(r => r.length);
 
     const label = period === "weekly"

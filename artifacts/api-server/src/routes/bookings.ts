@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, desc, or } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { db, bookingsTable, guestsTable, roomsTable, activityLogsTable } from "@workspace/db";
 import {
   GetBookingsResponse,
@@ -27,6 +27,13 @@ function toDateStr(d: Date | string): string {
   return d.toISOString().split("T")[0];
 }
 
+// Map stay_type directly to room status
+function roomStatusFor(stayType: string): string {
+  if (stayType === "long_stay_japan") return "long_stay_japan";
+  if (stayType === "long_stay_local") return "long_stay_local";
+  return "occupied_regular";
+}
+
 async function bookingWithDetails(b: typeof bookingsTable.$inferSelect) {
   const [guest] = await db.select().from(guestsTable).where(eq(guestsTable.id, b.guestId));
   const [room]  = await db.select().from(roomsTable).where(eq(roomsTable.id, b.roomId));
@@ -37,7 +44,6 @@ async function bookingWithDetails(b: typeof bookingsTable.$inferSelect) {
     guest_id: b.guestId,
     guest_name: guest?.name ?? "",
     guest_company: guest?.company ?? null,
-    guest_nationality: guest?.nationality ?? "",
     check_in_date: b.checkInDate,
     check_out_date: b.checkOutDate,
     actual_check_in: b.actualCheckIn?.toISOString() ?? null,
@@ -48,13 +54,6 @@ async function bookingWithDetails(b: typeof bookingsTable.$inferSelect) {
     notes: b.notes ?? null,
     created_at: b.createdAt.toISOString(),
   };
-}
-
-// Determine room status from stay type + nationality
-function roomStatusFor(stayType: string, nationality: string): string {
-  if (stayType !== "long_stay") return "occupied_regular";
-  const n = nationality.toLowerCase();
-  return (n.includes("jepang") || n === "japan" || n === "japanese") ? "long_stay_japan" : "long_stay_local";
 }
 
 // ── Direct check-in (one-step) ───────────────────────────────────
@@ -68,22 +67,17 @@ router.post("/direct-checkin", async (req, res): Promise<void> => {
 
   const d = parsed.data;
 
-  // Verify room exists and is available
   const [room] = await db.select().from(roomsTable).where(eq(roomsTable.id, d.room_id));
   if (!room) { res.status(404).json({ error: "Kamar tidak ditemukan" }); return; }
   if (room.status !== "available") { res.status(400).json({ error: "Kamar tidak tersedia" }); return; }
 
-  // Create guest
   const [guest] = await db.insert(guestsTable).values({
     name: d.guest_name,
     company: d.company ?? null,
-    idNumber: d.id_number,
-    idType: d.id_type,
-    nationality: d.nationality,
-    phone: null,
+    idNumber: "KARYAWAN",
+    idType: "ktp",
   }).returning();
 
-  // Create booking already checked-in
   const [booking] = await db.insert(bookingsTable).values({
     roomId: d.room_id,
     guestId: guest.id,
@@ -97,8 +91,7 @@ router.post("/direct-checkin", async (req, res): Promise<void> => {
     notes: d.notes ?? null,
   }).returning();
 
-  // Update room status
-  const newStatus = roomStatusFor(d.stay_type, d.nationality);
+  const newStatus = roomStatusFor(d.stay_type);
   await db.update(roomsTable).set({ status: newStatus, updatedAt: new Date() }).where(eq(roomsTable.id, d.room_id));
 
   await db.insert(activityLogsTable).values({
@@ -140,10 +133,8 @@ router.post("/bookings", async (req, res): Promise<void> => {
     const [newGuest] = await db.insert(guestsTable).values({
       name: g.name,
       company: g.company ?? null,
-      idNumber: g.id_number,
-      idType: g.id_type,
-      nationality: g.nationality,
-      phone: g.phone ?? null,
+      idNumber: "KARYAWAN",
+      idType: "ktp",
     }).returning();
     guestId = newGuest.id;
   }
@@ -161,13 +152,6 @@ router.post("/bookings", async (req, res): Promise<void> => {
     notes: parsed.data.notes ?? null,
     status: "reserved",
   }).returning();
-
-  await db.insert(activityLogsTable).values({
-    action: "booking_created",
-    description: `Reservasi baru untuk kamar ${parsed.data.room_id}`,
-    roomNumber: String(parsed.data.room_id),
-    guestName: null,
-  });
 
   const result = await bookingWithDetails(booking);
   res.status(201).json(GetBookingResponse.parse(result));
@@ -234,11 +218,10 @@ router.post("/bookings/:id/checkin", async (req, res): Promise<void> => {
     updatedAt: new Date(),
   }).where(eq(bookingsTable.id, params.data.id)).returning();
 
+  const [room] = await db.select().from(roomsTable).where(eq(roomsTable.id, booking.roomId));
   const [guest] = await db.select().from(guestsTable).where(eq(guestsTable.id, booking.guestId));
-  const [room]  = await db.select().from(roomsTable).where(eq(roomsTable.id, booking.roomId));
 
-  const newStatus = roomStatusFor(booking.stayType, guest?.nationality ?? "");
-  await db.update(roomsTable).set({ status: newStatus, updatedAt: new Date() }).where(eq(roomsTable.id, booking.roomId));
+  await db.update(roomsTable).set({ status: roomStatusFor(booking.stayType), updatedAt: new Date() }).where(eq(roomsTable.id, booking.roomId));
 
   await db.insert(activityLogsTable).values({
     action: "check_in",

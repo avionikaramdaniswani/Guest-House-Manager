@@ -32,35 +32,31 @@ function diffDays(from: string, to: string) {
   return Math.max(0, Math.ceil((b - a) / (1000 * 60 * 60 * 24)));
 }
 
+type StayType = "regular" | "long_stay_japan" | "long_stay_local";
+
 export default function CheckinDialog({ room, open, onOpenChange, onSuccess }: Props) {
   const qc = useQueryClient();
   const today = todayStr();
 
   const [guestName, setGuestName]         = useState("");
   const [company, setCompany]             = useState("");
-  const [nationality, setNationality]     = useState("Indonesia");
-  const [nationalityOther, setNationalityOther] = useState("");
   const [checkIn, setCheckIn]             = useState(today);
   const [checkOut, setCheckOut]           = useState(() => {
     const d = new Date(); d.setDate(d.getDate() + 1);
     return d.toISOString().split("T")[0];
   });
-  const [stayType, setStayType]           = useState<"regular" | "long_stay">("regular");
+  const [stayType, setStayType]           = useState<StayType>("regular");
   const [occupiedPersons, setOccupiedPersons] = useState(1);
   const [notes, setNotes]                 = useState("");
   const [loading, setLoading]             = useState(false);
   const [error, setError]                 = useState<string | null>(null);
 
   const totalDays = diffDays(checkIn, checkOut);
-  const resolvedNationality = nationality === "Lainnya" ? nationalityOther : nationality;
 
-  // Reset when dialog opens
   useEffect(() => {
     if (open) {
       setGuestName("");
       setCompany("");
-      setNationality("Indonesia");
-      setNationalityOther("");
       setCheckIn(today);
       const d = new Date(); d.setDate(d.getDate() + 1);
       setCheckOut(d.toISOString().split("T")[0]);
@@ -74,9 +70,6 @@ export default function CheckinDialog({ room, open, onOpenChange, onSuccess }: P
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!guestName.trim()) { setError("Nama tamu wajib diisi."); return; }
-    if (nationality === "Lainnya" && !nationalityOther.trim()) {
-      setError("Kewarganegaraan wajib diisi."); return;
-    }
     if (totalDays <= 0) { setError("Tanggal keluar harus setelah tanggal masuk."); return; }
 
     setLoading(true);
@@ -94,9 +87,6 @@ export default function CheckinDialog({ room, open, onOpenChange, onSuccess }: P
           room_id: room.id,
           guest_name: guestName.trim(),
           company: company.trim() || null,
-          nationality: resolvedNationality || "Indonesia",
-          id_number: "KARYAWAN",
-          id_type: "ktp",
           check_in_date: checkIn,
           check_out_date: checkOut,
           stay_type: stayType,
@@ -160,30 +150,6 @@ export default function CheckinDialog({ room, open, onOpenChange, onSuccess }: P
             />
           </div>
 
-          {/* Kewarganegaraan */}
-          <div className="space-y-1.5">
-            <Label>Kewarganegaraan <span className="text-destructive">*</span></Label>
-            <Select value={nationality} onValueChange={setNationality} disabled={loading}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Indonesia">Indonesia</SelectItem>
-                <SelectItem value="Jepang">Jepang</SelectItem>
-                <SelectItem value="Lainnya">Lainnya…</SelectItem>
-              </SelectContent>
-            </Select>
-            {nationality === "Lainnya" && (
-              <Input
-                placeholder="Sebutkan kewarganegaraan"
-                value={nationalityOther}
-                onChange={e => setNationalityOther(e.target.value)}
-                disabled={loading}
-                className="mt-1"
-              />
-            )}
-          </div>
-
           {/* Info kamar (readonly) */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -234,13 +200,14 @@ export default function CheckinDialog({ room, open, onOpenChange, onSuccess }: P
           {/* Tipe Menginap */}
           <div className="space-y-1.5">
             <Label>Tipe Menginap</Label>
-            <Select value={stayType} onValueChange={v => setStayType(v as "regular" | "long_stay")} disabled={loading}>
+            <Select value={stayType} onValueChange={v => setStayType(v as StayType)} disabled={loading}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="regular">Reguler</SelectItem>
-                <SelectItem value="long_stay">Long Stay</SelectItem>
+                <SelectItem value="long_stay_japan">Long Stay — Jepang</SelectItem>
+                <SelectItem value="long_stay_local">Long Stay — Lokal</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -56,7 +56,6 @@ router.get("/rooms/:id", async (req, res): Promise<void> => {
       createdAt: bookingsTable.createdAt,
       guestName: guestsTable.name,
       guestCompany: guestsTable.company,
-      guestNationality: guestsTable.nationality,
     })
     .from(bookingsTable)
     .leftJoin(guestsTable, eq(bookingsTable.guestId, guestsTable.id))
@@ -72,7 +71,6 @@ router.get("/rooms/:id", async (req, res): Promise<void> => {
     guest_id: booking.guestId,
     guest_name: booking.guestName ?? "",
     guest_company: booking.guestCompany ?? null,
-    guest_nationality: booking.guestNationality ?? "",
     check_in_date: booking.checkInDate,
     check_out_date: booking.checkOutDate,
     actual_check_in: booking.actualCheckIn?.toISOString() ?? null,

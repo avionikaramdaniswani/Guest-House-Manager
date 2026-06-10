@@ -98,7 +98,6 @@ export default function Bookings() {
                     <TableCell className="font-medium text-xs text-muted-foreground">#{booking.id}</TableCell>
                     <TableCell>
                       <div className="font-medium">{booking.guest_name}</div>
-                      <div className="text-xs text-muted-foreground">{booking.guest_nationality}</div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="font-bold">{booking.room_number}</Badge>
@@ -109,8 +108,10 @@ export default function Bookings() {
                       <span className="text-xs text-muted-foreground">{booking.guest_company ?? "—"}</span>
                     </TableCell>
                     <TableCell>
-                      {booking.stay_type === 'long_stay' ? (
-                        <Badge variant="secondary" className="text-xs">Long Stay</Badge>
+                      {booking.stay_type === 'long_stay_japan' ? (
+                        <Badge variant="secondary" className="text-xs">Long Stay 🇯🇵</Badge>
+                      ) : booking.stay_type === 'long_stay_local' ? (
+                        <Badge variant="secondary" className="text-xs">Long Stay Lokal</Badge>
                       ) : (
                         <span className="text-xs text-muted-foreground">Reguler</span>
                       )}

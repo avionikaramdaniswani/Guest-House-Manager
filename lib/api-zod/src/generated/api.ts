@@ -58,13 +58,12 @@ export const GetRoomResponse = zod.object({
     "guest_id": zod.number(),
     "guest_name": zod.string(),
     "guest_company": zod.string().nullish(),
-    "guest_nationality": zod.string(),
     "check_in_date": zod.coerce.date(),
     "check_out_date": zod.coerce.date(),
     "actual_check_in": zod.coerce.date().nullish(),
     "actual_check_out": zod.coerce.date().nullish(),
     "status": zod.enum(['reserved', 'checked_in', 'checked_out', 'cancelled']),
-    "stay_type": zod.enum(['regular', 'long_stay']),
+    "stay_type": zod.enum(['regular', 'long_stay_japan', 'long_stay_local']),
     "occupied_persons": zod.number(),
     "notes": zod.string().nullish(),
     "created_at": zod.coerce.date()
@@ -99,21 +98,13 @@ export const GetGuestsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "company": zod.string().nullish(),
-  "id_number": zod.string(),
-  "id_type": zod.enum(['ktp', 'passport']),
-  "nationality": zod.string(),
-  "phone": zod.string().nullish(),
   "created_at": zod.coerce.date()
 })
 export const GetGuestsResponse = zod.array(GetGuestsResponseItem)
 
 export const CreateGuestBody = zod.object({
   "name": zod.string(),
-  "company": zod.string().optional(),
-  "id_number": zod.string(),
-  "id_type": zod.enum(['ktp', 'passport']),
-  "nationality": zod.string(),
-  "phone": zod.string().optional()
+  "company": zod.string().optional()
 })
 
 export const GetGuestParams = zod.object({
@@ -123,10 +114,6 @@ export const GetGuestResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "company": zod.string().nullish(),
-  "id_number": zod.string(),
-  "id_type": zod.enum(['ktp', 'passport']),
-  "nationality": zod.string(),
-  "phone": zod.string().nullish(),
   "created_at": zod.coerce.date()
 })
 
@@ -135,20 +122,12 @@ export const UpdateGuestParams = zod.object({
 })
 export const UpdateGuestBody = zod.object({
   "name": zod.string().optional(),
-  "company": zod.string().nullish(),
-  "id_number": zod.string().optional(),
-  "id_type": zod.string().optional(),
-  "nationality": zod.string().optional(),
-  "phone": zod.string().nullish()
+  "company": zod.string().nullish()
 })
 export const UpdateGuestResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "company": zod.string().nullish(),
-  "id_number": zod.string(),
-  "id_type": zod.enum(['ktp', 'passport']),
-  "nationality": zod.string(),
-  "phone": zod.string().nullish(),
   "created_at": zod.coerce.date()
 })
 
@@ -161,13 +140,12 @@ const BookingShape = {
   "guest_id": zod.number(),
   "guest_name": zod.string(),
   "guest_company": zod.string().nullish(),
-  "guest_nationality": zod.string(),
   "check_in_date": zod.coerce.date(),
   "check_out_date": zod.coerce.date(),
   "actual_check_in": zod.coerce.date().nullish(),
   "actual_check_out": zod.coerce.date().nullish(),
   "status": zod.enum(['reserved', 'checked_in', 'checked_out', 'cancelled']),
-  "stay_type": zod.enum(['regular', 'long_stay']),
+  "stay_type": zod.enum(['regular', 'long_stay_japan', 'long_stay_local']),
   "occupied_persons": zod.number(),
   "notes": zod.string().nullish(),
   "created_at": zod.coerce.date()
@@ -186,15 +164,11 @@ export const CreateBookingBody = zod.object({
   "guest_id": zod.number().nullish(),
   "guest": zod.object({
     "name": zod.string(),
-    "company": zod.string().optional(),
-    "id_number": zod.string(),
-    "id_type": zod.enum(['ktp', 'passport']),
-    "nationality": zod.string(),
-    "phone": zod.string().optional()
+    "company": zod.string().optional()
   }).optional(),
   "check_in_date": zod.coerce.date(),
   "check_out_date": zod.coerce.date(),
-  "stay_type": zod.enum(['regular', 'long_stay']),
+  "stay_type": zod.enum(['regular', 'long_stay_japan', 'long_stay_local']),
   "occupied_persons": zod.number().default(1),
   "notes": zod.string().nullish()
 })
@@ -244,12 +218,9 @@ export const DirectCheckInBody = zod.object({
   "room_id": zod.number(),
   "guest_name": zod.string().min(1),
   "company": zod.string().nullish(),
-  "nationality": zod.string().default("Indonesia"),
-  "id_number": zod.string().default("KARYAWAN"),
-  "id_type": zod.enum(['ktp', 'passport']).default('ktp'),
   "check_in_date": zod.string(),   // YYYY-MM-DD
   "check_out_date": zod.string(),  // YYYY-MM-DD
-  "stay_type": zod.enum(['regular', 'long_stay']).default('regular'),
+  "stay_type": zod.enum(['regular', 'long_stay_japan', 'long_stay_local']).default('regular'),
   "occupied_persons": zod.number().int().min(1).default(1),
   "notes": zod.string().nullish()
 })
