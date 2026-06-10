@@ -1,14 +1,13 @@
-import { useState } from "react";
 import { 
   useGetDashboardSummary, 
   useGetTodayActivity, 
   useGetAlerts 
 } from "@workspace/api-client-react";
-import { formatRupiah, formatDateTime } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { AlertCircle, Bed, CheckCircle2, Clock, LogIn, LogOut, TrendingUp, Users } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, LogIn, LogOut, Users } from "lucide-react";
 
 export default function Dashboard() {
   const { data: summary, isLoading: isLoadingSummary } = useGetDashboardSummary();
@@ -32,11 +31,10 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Tingkat Hunian</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summary?.occupancy_rate.toFixed(1)}%</div>
@@ -46,7 +44,7 @@ export default function Dashboard() {
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Kamar Tersedia</CardTitle>
@@ -75,19 +73,6 @@ export default function Dashboard() {
                 {summary?.long_stay_local} Lokal
               </Badge>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Pendapatan Hari Ini</CardTitle>
-            <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">Hari Ini</Badge>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatRupiah(summary?.revenue_today)}</div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Bulan ini: {formatRupiah(summary?.revenue_month)}
-            </p>
           </CardContent>
         </Card>
       </div>

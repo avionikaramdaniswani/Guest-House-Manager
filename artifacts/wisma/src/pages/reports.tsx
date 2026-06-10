@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useGetDailyReport, useGetMonthlyReport } from "@workspace/api-client-react";
-import { format, subDays, startOfMonth } from "date-fns";
-import { formatRupiah, formatDate } from "@/lib/format";
+import { format } from "date-fns";
+import { formatDate } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
-import { Printer, BarChart3, TrendingUp, Users, LogIn, LogOut } from "lucide-react";
+import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from "recharts";
+import { Printer, BarChart3, Users, LogIn, LogOut } from "lucide-react";
 
 export default function Reports() {
   const [dailyDate, setDailyDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -22,10 +22,6 @@ export default function Reports() {
   });
 
   const COLORS = ['#0C447C', '#22c55e', '#eab308', '#f97316', '#64748b', '#8b5cf6'];
-
-  const handlePrint = () => {
-    window.print();
-  };
 
   const statusLabel = (status: string) => {
     switch (status) {
@@ -44,7 +40,7 @@ export default function Reports() {
           <BarChart3 className="w-8 h-8" />
           Laporan & Statistik
         </h1>
-        <Button onClick={handlePrint} variant="outline" className="print:hidden">
+        <Button onClick={() => window.print()} variant="outline" className="print:hidden">
           <Printer className="w-4 h-4 mr-2" />
           Cetak Laporan
         </Button>
@@ -55,12 +51,13 @@ export default function Reports() {
           <TabsTrigger value="daily">Laporan Harian</TabsTrigger>
           <TabsTrigger value="monthly">Laporan Bulanan</TabsTrigger>
         </TabsList>
-        
+
+        {/* ── HARIAN ── */}
         <TabsContent value="daily" className="space-y-6 mt-6">
           <div className="flex items-center gap-4 print:hidden">
-            <Input 
-              type="date" 
-              value={dailyDate} 
+            <Input
+              type="date"
+              value={dailyDate}
               onChange={(e) => setDailyDate(e.target.value)}
               className="w-[200px]"
             />
@@ -71,26 +68,13 @@ export default function Reports() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : dailyData && (
-            <div className="space-y-6 print:block">
+            <div className="space-y-6">
               <div className="hidden print:block text-center mb-8">
                 <h2 className="text-2xl font-bold">Laporan Harian - Wisma Eucaliptus</h2>
                 <p className="text-lg">{formatDate(dailyDate)}</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Pendapatan</p>
-                        <h3 className="text-2xl font-bold mt-1 text-primary">{formatRupiah(dailyData.revenue)}</h3>
-                      </div>
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <TrendingUp className="w-5 h-5 text-primary" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card>
                   <CardContent className="pt-6">
                     <div className="flex justify-between items-start">
@@ -144,13 +128,12 @@ export default function Reports() {
                         <th className="pb-2">Tamu</th>
                         <th className="pb-2">Tipe</th>
                         <th className="pb-2">Status</th>
-                        <th className="pb-2 text-right">Harga</th>
                       </tr>
                     </thead>
                     <tbody>
                       {dailyData.bookings.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="text-center py-4 text-muted-foreground">Tidak ada pemesanan pada tanggal ini.</td>
+                          <td colSpan={4} className="text-center py-4 text-muted-foreground">Tidak ada pemesanan pada tanggal ini.</td>
                         </tr>
                       ) : (
                         dailyData.bookings.map((booking) => (
@@ -168,7 +151,6 @@ export default function Reports() {
                                 {statusLabel(booking.status)}
                               </span>
                             </td>
-                            <td className="py-3 text-right">{formatRupiah(booking.price_per_night)}</td>
                           </tr>
                         ))
                       )}
@@ -180,6 +162,7 @@ export default function Reports() {
           )}
         </TabsContent>
 
+        {/* ── BULANAN ── */}
         <TabsContent value="monthly" className="space-y-6 mt-6">
           <div className="flex items-center gap-4 print:hidden">
             <Select value={monthlyYear} onValueChange={setMonthlyYear}>
@@ -219,19 +202,13 @@ export default function Reports() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : monthlyData && (
-            <div className="space-y-6 print:block">
+            <div className="space-y-6">
               <div className="hidden print:block text-center mb-8">
                 <h2 className="text-2xl font-bold">Laporan Bulanan - Wisma Eucaliptus</h2>
                 <p className="text-lg">{format(new Date(parseInt(monthlyYear), parseInt(monthlyMonth)-1, 1), 'MMMM yyyy')}</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardContent className="pt-6 text-center">
-                    <p className="text-sm font-medium text-muted-foreground">Total Pendapatan</p>
-                    <h3 className="text-3xl font-bold mt-2 text-primary">{formatRupiah(monthlyData.total_revenue)}</h3>
-                  </CardContent>
-                </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card>
                   <CardContent className="pt-6 text-center">
                     <p className="text-sm font-medium text-muted-foreground">Rata-rata Hunian</p>
@@ -246,65 +223,41 @@ export default function Reports() {
                 </Card>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Pendapatan per Tipe Kamar</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-72 w-full">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Kebangsaan Tamu</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-72 w-full">
+                    {monthlyData.nationality_breakdown.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={monthlyData.room_type_revenue}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                          <XAxis dataKey="type" />
-                          <YAxis tickFormatter={(val) => `Rp${val/1000000}M`} />
-                          <Tooltip 
-                            formatter={(value: number) => formatRupiah(value)}
-                            cursor={{fill: 'rgba(0,0,0,0.05)'}}
-                          />
-                          <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                        </BarChart>
+                        <PieChart>
+                          <Pie
+                            data={monthlyData.nationality_breakdown}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={90}
+                            paddingAngle={2}
+                            dataKey="count"
+                            nameKey="nationality"
+                          >
+                            {monthlyData.nationality_breakdown.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                          <Legend />
+                        </PieChart>
                       </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Kebangsaan Tamu</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-72 w-full">
-                      {monthlyData.nationality_breakdown.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={monthlyData.nationality_breakdown}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={60}
-                              outerRadius={90}
-                              paddingAngle={2}
-                              dataKey="count"
-                              nameKey="nationality"
-                            >
-                              {monthlyData.nationality_breakdown.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                              ))}
-                            </Pie>
-                            <Tooltip />
-                            <Legend />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="h-full flex items-center justify-center text-muted-foreground">
-                          Tidak ada data tamu bulan ini
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-muted-foreground">
+                        Tidak ada data tamu bulan ini
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
         </TabsContent>

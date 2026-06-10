@@ -1,21 +1,13 @@
 import { useState } from "react";
-import { useGetBookings, useCreateBooking } from "@workspace/api-client-react";
-import { formatRupiah, formatDate, formatDateTime } from "@/lib/format";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useGetBookings } from "@workspace/api-client-react";
+import { formatDate, formatDateTime } from "@/lib/format";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { CalendarDays, Plus, Search } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
-import { getGetBookingsQueryKey } from "@workspace/api-client-react";
 
 export default function Bookings() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -87,17 +79,16 @@ export default function Bookings() {
                 <TableHead>Check Out</TableHead>
                 <TableHead>Tipe</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Harga/Malam</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Memuat data pemesanan...</TableCell>
+                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Memuat data pemesanan...</TableCell>
                 </TableRow>
               ) : filteredBookings?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Tidak ada pemesanan ditemukan.</TableCell>
+                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Tidak ada pemesanan ditemukan.</TableCell>
                 </TableRow>
               ) : (
                 filteredBookings?.map(booking => (
@@ -120,7 +111,6 @@ export default function Bookings() {
                       )}
                     </TableCell>
                     <TableCell>{getStatusBadge(booking.status)}</TableCell>
-                    <TableCell className="text-right font-medium">{formatRupiah(booking.price_per_night)}</TableCell>
                   </TableRow>
                 ))
               )}
