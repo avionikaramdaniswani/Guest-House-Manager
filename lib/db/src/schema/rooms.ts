@@ -5,10 +5,10 @@ import { z } from "zod/v4";
 export const roomsTable = pgTable("rooms", {
   id: serial("id").primaryKey(),
   number: text("number").notNull().unique(),
-  block: text("block").notNull(), // A, C, D, E, G, facility
-  type: text("type").notNull(), // single, double, family
-  stars: integer("stars").notNull(), // 1=Double Bed, 2=Family, 3=Long Stay/Big Room
-  pricePerNight: integer("price_per_night").notNull(),
+  block: text("block").notNull(),           // A, C, D, G, facility
+  type: text("type").notNull(),             // single, double, family
+  stars: integer("stars").notNull(),        // 1=Single, 2=Family, 3=Long Stay
+  roomName: text("room_name"),              // e.g. "Kamar Standard (★)"
   status: text("status").notNull().default("available"),
   // available, occupied_regular, long_stay_japan, long_stay_local, blocked, facility
   notes: text("notes"),

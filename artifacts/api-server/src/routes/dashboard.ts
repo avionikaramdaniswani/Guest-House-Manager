@@ -23,33 +23,6 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
   const blocked = rooms.filter(r => r.status === "blocked").length;
   const occupancyRate = totalRooms > 0 ? (occupied / totalRooms) * 100 : 0;
 
-  const today = new Date().toISOString().split("T")[0];
-  const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
-
-  const todayCheckouts = await db
-    .select()
-    .from(bookingsTable)
-    .where(
-      and(
-        eq(bookingsTable.status, "checked_out"),
-        gte(sql`DATE(${bookingsTable.actualCheckOut})`, today),
-        lte(sql`DATE(${bookingsTable.actualCheckOut})`, today)
-      )
-    );
-
-  const monthCheckouts = await db
-    .select()
-    .from(bookingsTable)
-    .where(
-      and(
-        eq(bookingsTable.status, "checked_out"),
-        gte(sql`DATE(${bookingsTable.actualCheckOut})`, firstOfMonth)
-      )
-    );
-
-  const revenueToday = todayCheckouts.reduce((sum, b) => sum + (b.totalAmount ?? 0), 0);
-  const revenueMonth = monthCheckouts.reduce((sum, b) => sum + (b.totalAmount ?? 0), 0);
-
   res.json(GetDashboardSummaryResponse.parse({
     total_rooms: totalRooms,
     occupied,
@@ -58,8 +31,6 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
     long_stay_local: longStayLocal,
     blocked,
     occupancy_rate: Math.round(occupancyRate * 10) / 10,
-    revenue_today: revenueToday,
-    revenue_month: revenueMonth,
   }));
 });
 

@@ -77,18 +77,20 @@ export default function Bookings() {
                 <TableHead>Kamar</TableHead>
                 <TableHead>Check In</TableHead>
                 <TableHead>Check Out</TableHead>
+                <TableHead>Perusahaan</TableHead>
                 <TableHead>Tipe</TableHead>
+                <TableHead>Penghuni</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Memuat data pemesanan...</TableCell>
+                  <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Memuat data pemesanan...</TableCell>
                 </TableRow>
               ) : filteredBookings?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Tidak ada pemesanan ditemukan.</TableCell>
+                  <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Tidak ada pemesanan ditemukan.</TableCell>
                 </TableRow>
               ) : (
                 filteredBookings?.map(booking => (
@@ -104,12 +106,16 @@ export default function Bookings() {
                     <TableCell>{formatDate(booking.check_in_date)}</TableCell>
                     <TableCell>{formatDate(booking.check_out_date)}</TableCell>
                     <TableCell>
+                      <span className="text-xs text-muted-foreground">{booking.guest_company ?? "—"}</span>
+                    </TableCell>
+                    <TableCell>
                       {booking.stay_type === 'long_stay' ? (
                         <Badge variant="secondary" className="text-xs">Long Stay</Badge>
                       ) : (
                         <span className="text-xs text-muted-foreground">Reguler</span>
                       )}
                     </TableCell>
+                    <TableCell className="text-xs text-center text-muted-foreground">{booking.occupied_persons ?? 1}</TableCell>
                     <TableCell>{getStatusBadge(booking.status)}</TableCell>
                   </TableRow>
                 ))

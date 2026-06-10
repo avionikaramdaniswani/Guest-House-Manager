@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BedDouble, CheckCircle2, User } from "lucide-react";
 import type { Room } from "@workspace/api-client-react";
+import CheckinDialog from "@/components/checkin-dialog";
 
 // ─── Grid constants ─────────────────────────────────────────────
 const SW  = 66;   // side col width
@@ -161,6 +162,7 @@ function TR({ lbl, desc }: { lbl: string; desc: string }) {
 export default function FloorPlan() {
   const { data: rooms, isLoading, refetch } = useGetRooms();
   const [selected, setSelected] = useState<Room | null>(null);
+  const [checkinOpen, setCheckinOpen] = useState(false);
 
   // Force fresh data every time the floor plan is opened
   useEffect(() => { refetch(); }, []);
@@ -341,6 +343,20 @@ export default function FloorPlan() {
         </div>
       </div>
 
+      {/* ── Check-in Dialog ── */}
+      {selected && (
+        <CheckinDialog
+          room={selected}
+          open={checkinOpen}
+          onOpenChange={setCheckinOpen}
+          onSuccess={() => {
+            setCheckinOpen(false);
+            setSelected(null);
+            refetch();
+          }}
+        />
+      )}
+
       {/* ── Room Detail Sheet ── */}
       <Sheet open={selected !== null} onOpenChange={open => !open && setSelected(null)}>
         <SheetContent className="sm:max-w-sm border-l shadow-2xl">
@@ -401,7 +417,9 @@ export default function FloorPlan() {
 
               <div className="pt-4 border-t space-y-2">
                 {selected.status === "available" && (
-                  <Button size="lg" className="w-full">Check-in Tamu</Button>
+                  <Button size="lg" className="w-full" onClick={() => setCheckinOpen(true)}>
+                    Check-in Tamu
+                  </Button>
                 )}
                 {["occupied_regular","long_stay_japan","long_stay_local"].includes(selected.status) && (
                   <Button size="lg" variant="secondary" className="w-full">Check-out Tamu</Button>

@@ -13,10 +13,11 @@ export const bookingsTable = pgTable("bookings", {
   status: text("status").notNull().default("reserved"),
   // reserved, checked_in, checked_out, cancelled
   stayType: text("stay_type").notNull().default("regular"), // regular, long_stay
-  pricePerNight: integer("price_per_night").notNull(),
+  pricePerNight: integer("price_per_night").notNull().default(0),
+  occupiedPersons: integer("occupied_persons").notNull().default(1),
   totalAmount: integer("total_amount"),
   deposit: integer("deposit"),
-  paymentMethod: text("payment_method"), // cash, transfer, card
+  paymentMethod: text("payment_method"),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

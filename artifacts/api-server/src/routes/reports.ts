@@ -9,6 +9,31 @@ import {
 
 const router: IRouter = Router();
 
+async function enrichBookings(bookings: typeof bookingsTable.$inferSelect[]) {
+  return Promise.all(bookings.map(async (b) => {
+    const [guest] = await db.select().from(guestsTable).where(eq(guestsTable.id, b.guestId));
+    const [room]  = await db.select().from(roomsTable).where(eq(roomsTable.id, b.roomId));
+    return {
+      id: b.id,
+      room_id: b.roomId,
+      room_number: room?.number ?? "",
+      guest_id: b.guestId,
+      guest_name: guest?.name ?? "",
+      guest_company: guest?.company ?? null,
+      guest_nationality: guest?.nationality ?? "",
+      check_in_date: b.checkInDate,
+      check_out_date: b.checkOutDate,
+      actual_check_in: b.actualCheckIn?.toISOString() ?? null,
+      actual_check_out: b.actualCheckOut?.toISOString() ?? null,
+      status: b.status,
+      stay_type: b.stayType,
+      occupied_persons: b.occupiedPersons,
+      notes: b.notes ?? null,
+      created_at: b.createdAt.toISOString(),
+    };
+  }));
+}
+
 router.get("/reports/daily", async (req, res): Promise<void> => {
   const { date } = req.query as { date?: string };
   if (!date) {
@@ -41,35 +66,6 @@ router.get("/reports/daily", async (req, res): Promise<void> => {
     .from(bookingsTable)
     .where(eq(bookingsTable.checkInDate, date));
 
-  const revenue = checkOutsRows.reduce((sum, b) => sum + (b.totalAmount ?? 0), 0);
-
-  async function enrichBookings(bookings: typeof bookingsTable.$inferSelect[]) {
-    return Promise.all(bookings.map(async (b) => {
-      const [guest] = await db.select().from(guestsTable).where(eq(guestsTable.id, b.guestId));
-      const [room] = await db.select().from(roomsTable).where(eq(roomsTable.id, b.roomId));
-      return {
-        id: b.id,
-        room_id: b.roomId,
-        room_number: room?.number ?? "",
-        guest_id: b.guestId,
-        guest_name: guest?.name ?? "",
-        guest_nationality: guest?.nationality ?? "",
-        check_in_date: b.checkInDate,
-        check_out_date: b.checkOutDate,
-        actual_check_in: b.actualCheckIn?.toISOString() ?? null,
-        actual_check_out: b.actualCheckOut?.toISOString() ?? null,
-        status: b.status,
-        stay_type: b.stayType,
-        price_per_night: b.pricePerNight,
-        total_amount: b.totalAmount ?? null,
-        deposit: b.deposit ?? null,
-        payment_method: b.paymentMethod ?? null,
-        notes: b.notes ?? null,
-        created_at: b.createdAt.toISOString(),
-      };
-    }));
-  }
-
   const allBookings = await enrichBookings([...checkInsRows, ...checkOutsRows]);
 
   res.json(GetDailyReportResponse.parse({
@@ -77,7 +73,6 @@ router.get("/reports/daily", async (req, res): Promise<void> => {
     check_ins: checkInsRows.length,
     check_outs: checkOutsRows.length,
     new_reservations: reservationsRows.length,
-    revenue,
     bookings: allBookings,
   }));
 });
@@ -92,7 +87,7 @@ router.get("/reports/monthly", async (req, res): Promise<void> => {
   const y = parseInt(year, 10);
   const m = parseInt(month, 10);
   const firstDay = `${y}-${String(m).padStart(2, "0")}-01`;
-  const lastDay = new Date(y, m, 0).toISOString().split("T")[0];
+  const lastDay  = new Date(y, m, 0).toISOString().split("T")[0];
 
   const checkouts = await db
     .select()
@@ -105,10 +100,8 @@ router.get("/reports/monthly", async (req, res): Promise<void> => {
       )
     );
 
-  const totalRevenue = checkouts.reduce((sum, b) => sum + (b.totalAmount ?? 0), 0);
   const totalGuests = checkouts.length;
 
-  // Nationality breakdown
   const nationalityMap = new Map<string, number>();
   for (const b of checkouts) {
     const [guest] = await db.select().from(guestsTable).where(eq(guestsTable.id, b.guestId));
@@ -120,49 +113,23 @@ router.get("/reports/monthly", async (req, res): Promise<void> => {
     count,
   }));
 
-  // Room type revenue
-  const typeRevenueMap = new Map<string, { revenue: number; nights: number }>();
-  for (const b of checkouts) {
-    const [room] = await db.select().from(roomsTable).where(eq(roomsTable.id, b.roomId));
-    const stars = room?.stars ?? 1;
-    const typeLabel = stars === 1 ? "Double Bed (*)" : stars === 2 ? "Family Room (**)" : "Long Stay/Big Room (***)";
-    const existing = typeRevenueMap.get(typeLabel) ?? { revenue: 0, nights: 0 };
-    const checkIn = b.actualCheckIn ?? new Date(b.checkInDate);
-    const checkOut = b.actualCheckOut ?? new Date(b.checkOutDate);
-    const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
-    typeRevenueMap.set(typeLabel, {
-      revenue: existing.revenue + (b.totalAmount ?? 0),
-      nights: existing.nights + nights,
-    });
-  }
-  const roomTypeRevenue = Array.from(typeRevenueMap.entries()).map(([type, data]) => ({
-    type,
-    revenue: data.revenue,
-    nights: data.nights,
-  }));
-
-  // Occupancy rate: count days where rooms were occupied
   const totalRoomCount = await db.select().from(roomsTable).where(eq(roomsTable.isFacility, false)).then(r => r.length);
-  const daysInMonth = new Date(y, m, 0).getDate();
   const avgOccupancyRate = totalRoomCount > 0
-    ? Math.round((totalGuests / (totalRoomCount * daysInMonth / 30)) * 100) / 100
+    ? Math.round((totalGuests / (totalRoomCount * 30 / 30)) * 100) / 100
     : 0;
 
   res.json(GetMonthlyReportResponse.parse({
     year: y,
     month: m,
-    total_revenue: totalRevenue,
     avg_occupancy_rate: Math.min(100, Math.round(avgOccupancyRate * 10) / 10),
     total_guests: totalGuests,
     nationality_breakdown: nationalityBreakdown,
-    room_type_revenue: roomTypeRevenue,
   }));
 });
 
 router.get("/reports/occupancy-chart", async (req, res): Promise<void> => {
   const period = (req.query.period as string) ?? "weekly";
   const today = new Date();
-  const dataPoints: Array<{ label: string; date: string; occupied: number; total: number; rate: number }> = [];
 
   const totalRooms = await db
     .select()
@@ -171,6 +138,7 @@ router.get("/reports/occupancy-chart", async (req, res): Promise<void> => {
     .then(r => r.length);
 
   const days = period === "weekly" ? 7 : 30;
+  const dataPoints: Array<{ label: string; date: string; occupied: number; total: number; rate: number }> = [];
 
   for (let i = days - 1; i >= 0; i--) {
     const date = new Date(today);

@@ -66,7 +66,8 @@ export interface Room {
   type: RoomType;
   /** 1=Double Bed, 2=Family, 3=Long Stay/Big Room */
   stars: number;
-  price_per_night: number;
+  /** @nullable */
+  room_name?: string | null;
   status: RoomStatus;
   /** @nullable */
   notes?: string | null;
@@ -97,6 +98,8 @@ export interface Booking {
   room_number: string;
   guest_id: number;
   guest_name: string;
+  /** @nullable */
+  guest_company?: string | null;
   guest_nationality: string;
   check_in_date: string;
   check_out_date: string;
@@ -106,13 +109,7 @@ export interface Booking {
   actual_check_out?: string | null;
   status: BookingStatus;
   stay_type: BookingStayType;
-  price_per_night: number;
-  /** @nullable */
-  total_amount?: number | null;
-  /** @nullable */
-  deposit?: number | null;
-  /** @nullable */
-  payment_method?: string | null;
+  occupied_persons: number;
   /** @nullable */
   notes?: string | null;
   created_at: string;
@@ -124,7 +121,8 @@ export interface RoomDetail {
   block: string;
   type: string;
   stars: number;
-  price_per_night: number;
+  /** @nullable */
+  room_name?: string | null;
   status: string;
   /** @nullable */
   notes?: string | null;
@@ -161,6 +159,8 @@ export const GuestIdType = {
 export interface Guest {
   id: number;
   name: string;
+  /** @nullable */
+  company?: string | null;
   id_number: string;
   id_type: GuestIdType;
   nationality: string;
@@ -210,9 +210,7 @@ export interface BookingInput {
   check_in_date: string;
   check_out_date: string;
   stay_type: BookingInputStayType;
-  price_per_night: number;
-  /** @nullable */
-  deposit?: number | null;
+  occupied_persons?: number;
   /** @nullable */
   notes?: string | null;
 }
@@ -230,9 +228,7 @@ export const BookingUpdateStatus = {
 export interface BookingUpdate {
   check_in_date?: string;
   check_out_date?: string;
-  price_per_night?: number;
-  /** @nullable */
-  deposit?: number | null;
+  occupied_persons?: number;
   /** @nullable */
   notes?: string | null;
   status?: BookingUpdateStatus;
