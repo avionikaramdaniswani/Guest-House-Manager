@@ -1,0 +1,2 @@
+- [Room type enum](room-type-enum.md) — Zod schema pakai 'single'|'double'|'family', bukan 'standard'/'longstay'. Stars: single=1★, family=2★★, double=3★★★.
+- [Floor plan performance](floor-plan-perf.md) — Jangan definisikan sub-komponen (RC, FC, dll.) di dalam fungsi utama; pindahkan ke luar dan pakai memo + Map lookup.
