@@ -1,32 +1,36 @@
 import { useState, useMemo, useEffect, memo } from "react";
-import { useGetRooms } from "@workspace/api-client-react";
-import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
-} from "@/components/ui/sheet";
+import { useQueryClient } from "@tanstack/react-query";
+import { useGetRooms, useGetRoom, getGetRoomsQueryKey } from "@workspace/api-client-react";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { BedDouble, CheckCircle2, User } from "lucide-react";
 import type { Room } from "@workspace/api-client-react";
 import CheckinDialog from "@/components/checkin-dialog";
+import { formatDate } from "@/lib/format";
+import { getToken } from "@/lib/auth";
+import {
+  User, Building2, CalendarDays, CalendarOff, LogOut,
+  UserCheck, Lock, Unlock, CheckCircle2, Loader2, Users,
+  FileText, AlertTriangle,
+} from "lucide-react";
 
 // ─── Grid constants ─────────────────────────────────────────────
-const SW  = 66;   // side col width
-const CVW = 16;   // corridor col width
-const NW  = 74;   // normal petak width
-const RH  = 38;   // row height
-const CHH = 22;   // corridor horizontal height
-const SH  = 26;   // separator row height
+const SW  = 66;
+const CVW = 16;
+const NW  = 74;
+const RH  = 38;
+const CHH = 22;
+const SH  = 26;
 
 const GCOLS = [SW, CVW, SW, ...Array(8).fill(NW)].map(x => `${x}px`).join(" ");
 const GROWS = [
-  `${RH}px`, `${CHH}px`, `${RH}px`,           // rows 1-3  Block A
-  ...Array(9).fill(`${RH}px`),                  // rows 4-12 Block C
-  `${SH}px`, `${SH}px`, `${SH}px`,             // rows 13-15 Separator lobby D
-  ...Array(9).fill(`${RH}px`),                  // rows 16-24 Block D/E
-  `${RH}px`, `${CHH}px`, `${RH}px`,            // rows 25-27 Block G
+  `${RH}px`, `${CHH}px`, `${RH}px`,
+  ...Array(9).fill(`${RH}px`),
+  `${SH}px`, `${SH}px`, `${SH}px`,
+  ...Array(9).fill(`${RH}px`),
+  `${RH}px`, `${CHH}px`, `${RH}px`,
 ].join(" ");
 
-// ─── Color helpers (outside component — pure functions) ─────────
+// ─── Color helpers ───────────────────────────────────────────────
 function sbg(s: string) {
   if (s === "available")         return "#ffffff";
   if (s === "occupied_regular")  return "#fde68a";
@@ -38,63 +42,61 @@ function sbg(s: string) {
 function sfg(s: string) {
   return ["long_stay_japan","long_stay_local","blocked"].includes(s) ? "#fff" : "#111827";
 }
+function statusLabel(s: string) {
+  if (s === "available")        return "Tersedia";
+  if (s === "occupied_regular") return "Reguler";
+  if (s === "long_stay_japan")  return "Long Stay — Jepang";
+  if (s === "long_stay_local")  return "Long Stay — Lokal";
+  if (s === "blocked")          return "Diblokir";
+  return s;
+}
+function typeLabel(t: string) {
+  if (t === "single") return "Single Bed (★)";
+  if (t === "family") return "Family Room (★★)";
+  return "Long Stay / Big Room (★★★)";
+}
+function diffDays(from: string, to: string) {
+  return Math.ceil((new Date(to).getTime() - new Date(from).getTime()) / 86400000);
+}
 
-// ─── Cell components — defined OUTSIDE FloorPlan ────────────────
-// (if defined inside, React treats them as new types on every render
-//  which forces remount of every cell and breaks click handlers)
-
+// ─── Cell components (defined OUTSIDE main component) ───────────
 const LOBBY_BG    = "#e9ecef";
 const FACILITY_BG = "#dee2e6";
 const CORRIDOR_BG = "#f1f3f5";
 
 type SelectFn = (room: Room) => void;
 
-interface RCProps {
-  n: string; room: Room | undefined;
-  col: number; row: number; span?: number;
-  onSelect: SelectFn;
-}
-const RoomCell = memo(({ n, room, col, row, span, onSelect }: RCProps) => {
-  const colStr = span ? `${col} / ${col + span}` : String(col);
-  return (
-    <button
-      onClick={() => room && onSelect(room)}
-      style={{
-        gridColumn: colStr, gridRow: String(row),
-        display:"flex", alignItems:"center", justifyContent:"center",
-        minWidth:0, minHeight:0, overflow:"hidden",
-        background: room ? sbg(room.status) : "#ffffff",
-        color: room ? sfg(room.status) : "#374151",
-        cursor: room ? "pointer" : "default",
-        flexDirection:"column", gap:1, padding:"0 2px",
-        transition: "filter 0.1s",
-      }}
-      onMouseEnter={e => room && (e.currentTarget.style.filter = "brightness(0.92)")}
-      onMouseLeave={e => (e.currentTarget.style.filter = "")}
-    >
-      <span style={{ fontWeight:800, fontSize:11, lineHeight:1 }}>{n}</span>
-      {(room?.stars ?? 0) > 0 && (
-        <span style={{ fontSize:8, lineHeight:1 }}>{"★".repeat(room!.stars)}</span>
-      )}
-    </button>
-  );
-});
-
-interface FCProps { lbl: string; col: number; row: number; span?: number; }
-const FacilityCell = memo(({ lbl, col, row, span }: FCProps) => {
-  const colStr = span ? `${col} / ${col + span}` : String(col);
-  return (
-    <div style={{
-      gridColumn: colStr, gridRow: String(row),
+interface RCProps { n: string; room: Room | undefined; col: number; row: number; span?: number; onSelect: SelectFn; }
+const RoomCell = memo(({ n, room, col, row, span, onSelect }: RCProps) => (
+  <button
+    onClick={() => room && onSelect(room)}
+    style={{
+      gridColumn: span ? `${col} / ${col + span}` : String(col), gridRow: String(row),
       display:"flex", alignItems:"center", justifyContent:"center",
       minWidth:0, minHeight:0, overflow:"hidden",
-      background:FACILITY_BG, fontSize:9, fontWeight:700,
-      color:"#374151", textAlign:"center", padding:"0 3px", lineHeight:1.2,
-    }}>
-      {lbl}
-    </div>
-  );
-});
+      background: room ? sbg(room.status) : "#ffffff",
+      color: room ? sfg(room.status) : "#374151",
+      cursor: room ? "pointer" : "default",
+      flexDirection:"column", gap:1, padding:"0 2px", transition:"filter 0.1s",
+    }}
+    onMouseEnter={e => room && (e.currentTarget.style.filter = "brightness(0.92)")}
+    onMouseLeave={e => (e.currentTarget.style.filter = "")}
+  >
+    <span style={{ fontWeight:800, fontSize:11, lineHeight:1 }}>{n}</span>
+    {(room?.stars ?? 0) > 0 && <span style={{ fontSize:8, lineHeight:1 }}>{"★".repeat(room!.stars)}</span>}
+  </button>
+));
+
+interface FCProps { lbl: string; col: number; row: number; span?: number; }
+const FacilityCell = memo(({ lbl, col, row, span }: FCProps) => (
+  <div style={{
+    gridColumn: span ? `${col} / ${col + span}` : String(col), gridRow: String(row),
+    display:"flex", alignItems:"center", justifyContent:"center",
+    minWidth:0, minHeight:0, overflow:"hidden",
+    background:FACILITY_BG, fontSize:9, fontWeight:700, color:"#374151",
+    textAlign:"center", padding:"0 3px", lineHeight:1.2,
+  }}>{lbl}</div>
+));
 
 interface CVProps { col: number; r1: number; r2: number; lbl: string; }
 const CorridorV = memo(({ col, r1, r2, lbl }: CVProps) => (
@@ -103,10 +105,7 @@ const CorridorV = memo(({ col, r1, r2, lbl }: CVProps) => (
     display:"flex", alignItems:"center", justifyContent:"center",
     minWidth:0, minHeight:0, background:CORRIDOR_BG,
   }}>
-    <span style={{
-      writingMode:"vertical-rl", transform:"rotate(180deg)",
-      fontSize:8, color:"#6b7280", fontWeight:700, letterSpacing:2,
-    }}>{lbl}</span>
+    <span style={{ writingMode:"vertical-rl", transform:"rotate(180deg)", fontSize:8, color:"#6b7280", fontWeight:700, letterSpacing:2 }}>{lbl}</span>
   </div>
 ));
 
@@ -115,11 +114,8 @@ const CorridorH = memo(({ c1, c2, row, lbl }: CHProps) => (
   <div style={{
     gridColumn: `${c1} / ${c2+1}`, gridRow: String(row),
     display:"flex", alignItems:"center", justifyContent:"center",
-    minWidth:0, minHeight:0,
-    background:CORRIDOR_BG, fontSize:9, fontWeight:700, color:"#6b7280", letterSpacing:1,
-  }}>
-    {lbl}
-  </div>
+    minWidth:0, minHeight:0, background:CORRIDOR_BG, fontSize:9, fontWeight:700, color:"#6b7280", letterSpacing:1,
+  }}>{lbl}</div>
 ));
 
 interface LobbyProps { col: string; row: string; label: string; }
@@ -127,8 +123,7 @@ const LobbyBlock = memo(({ col, row, label }: LobbyProps) => (
   <div style={{
     gridColumn: col, gridRow: row,
     display:"flex", alignItems:"center", justifyContent:"center",
-    minWidth:0, minHeight:0,
-    background:LOBBY_BG, fontWeight:700, fontSize:12, color:"#374151",
+    minWidth:0, minHeight:0, background:LOBBY_BG, fontWeight:700, fontSize:12, color:"#374151",
     flexDirection:"column", gap:2,
   }}>
     <span style={{ fontSize:8, color:"#9ca3af" }}>◤</span>
@@ -136,7 +131,7 @@ const LobbyBlock = memo(({ col, row, label }: LobbyProps) => (
   </div>
 ));
 
-// ─── Legend sub-components ──────────────────────────────────────
+// ─── Legend sub-components ───────────────────────────────────────
 function LR({ color, label }: { color: string; label: string }) {
   return (
     <div style={{ display:"flex", alignItems:"center", gap:6 }}>
@@ -150,10 +145,320 @@ function TR({ lbl, desc }: { lbl: string; desc: string }) {
     <div style={{ display:"flex", alignItems:"center", gap:6 }}>
       <div style={{
         width:44, height:18, background:"#bbf7d0", border:"1px solid #9ca3af",
-        display:"flex", alignItems:"center", justifyContent:"center",
-        fontSize:10, fontWeight:700, flexShrink:0,
+        display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:700, flexShrink:0,
       }}>{lbl}</div>
       <span style={{ fontSize:11, color:"#374151" }}>{desc}</span>
+    </div>
+  );
+}
+
+// ─── Room Detail Panel ───────────────────────────────────────────
+function RoomDetailContent({
+  room, onClose, onCheckin, onRefresh,
+}: {
+  room: Room;
+  onClose: () => void;
+  onCheckin: () => void;
+  onRefresh: () => void;
+}) {
+  const qc = useQueryClient();
+  const { data: detail, isLoading: loadingDetail } = useGetRoom(room.id);
+  const booking = detail?.current_booking ?? null;
+
+  const [checkoutConfirm, setCheckoutConfirm] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  const isOccupied = ["occupied_regular","long_stay_japan","long_stay_local"].includes(room.status);
+
+  const totalDays  = booking ? diffDays(String(booking.check_in_date), String(booking.check_out_date)) : 0;
+  const today      = new Date().toISOString().split("T")[0];
+  const daysLeft   = booking ? diffDays(today, String(booking.check_out_date)) : 0;
+
+  async function handleCheckout() {
+    if (!booking) return;
+    setCheckoutLoading(true);
+    setCheckoutError(null);
+    try {
+      const token = getToken();
+      const resp = await fetch(`/api/bookings/${booking.id}/checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({}),
+      });
+      if (!resp.ok) {
+        const d = await resp.json().catch(() => ({}));
+        setCheckoutError(d.error ?? "Gagal check-out");
+        return;
+      }
+      await qc.invalidateQueries({ queryKey: getGetRoomsQueryKey() });
+      onRefresh();
+      onClose();
+    } catch {
+      setCheckoutError("Terjadi kesalahan jaringan.");
+    } finally {
+      setCheckoutLoading(false);
+    }
+  }
+
+  return (
+    <div className="h-full flex flex-col overflow-hidden">
+
+      {/* ── Colored Header ── */}
+      <div
+        className="px-5 pt-5 pb-4 shrink-0"
+        style={{ background: sbg(room.status), color: sfg(room.status) }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[10px] font-bold uppercase tracking-[0.15em] opacity-60 mb-0.5">
+              {typeLabel(room.type)}
+            </div>
+            <div className="text-3xl font-black leading-tight">Kamar {room.number}</div>
+            <div className="flex items-center gap-1.5 mt-1 text-xs font-medium opacity-70 flex-wrap">
+              <span>Blok {room.block}</span>
+              <span>·</span>
+              <span>{"★".repeat(room.stars)}</span>
+              {room.room_name && (
+                <>
+                  <span>·</span>
+                  <span className="truncate">{room.room_name}</span>
+                </>
+              )}
+            </div>
+          </div>
+          <div
+            className="shrink-0 mt-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide"
+            style={{ background:"rgba(0,0,0,0.12)", color: sfg(room.status) }}
+          >
+            {statusLabel(room.status)}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Body ── */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+
+        {/* Available */}
+        {room.status === "available" && (
+          <div className="rounded-xl bg-green-50 border border-green-200 p-5 text-center">
+            <CheckCircle2 className="w-9 h-9 text-green-500 mx-auto mb-2" />
+            <p className="font-bold text-green-800">Kamar Tersedia</p>
+            <p className="text-xs text-green-600 mt-1">Siap untuk check-in tamu baru</p>
+          </div>
+        )}
+
+        {/* Blocked */}
+        {room.status === "blocked" && (
+          <div className="rounded-xl bg-red-50 border border-red-200 p-4">
+            <div className="flex items-center gap-2 text-red-700 font-bold mb-1">
+              <Lock className="w-4 h-4" />
+              Kamar Diblokir
+            </div>
+            <p className="text-xs text-red-600">Kamar tidak dapat digunakan sementara.</p>
+          </div>
+        )}
+
+        {/* Occupied: Guest info */}
+        {isOccupied && (
+          loadingDetail ? (
+            <div className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
+              <Loader2 className="w-6 h-6 animate-spin" />
+              <span className="text-sm">Memuat info tamu…</span>
+            </div>
+          ) : booking ? (
+            <div className="space-y-3">
+
+              {/* Guest identity card */}
+              <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+                <div className="px-4 py-3 bg-muted/40 border-b flex items-center gap-2">
+                  <User className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Info Tamu</span>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Nama</p>
+                    <p className="font-bold text-base mt-0.5">{booking.guest_name}</p>
+                  </div>
+                  {booking.guest_company && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Perusahaan</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        <p className="font-medium text-sm">{booking.guest_company}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Dates + counters card */}
+              <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+                <div className="px-4 py-3 bg-muted/40 border-b flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Periode Menginap</span>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                        <CalendarDays className="w-3 h-3" /> Check-in
+                      </div>
+                      <p className="font-semibold text-sm">{formatDate(String(booking.check_in_date))}</p>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                        <CalendarOff className="w-3 h-3" /> Check-out
+                      </div>
+                      <p className="font-semibold text-sm">{formatDate(String(booking.check_out_date))}</p>
+                    </div>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="grid grid-cols-3 gap-2 pt-2 border-t">
+                    <div className="text-center">
+                      <p className="text-2xl font-black text-primary leading-none">{totalDays}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">Total Hari</p>
+                    </div>
+                    <div className="text-center border-x">
+                      <p className={`text-2xl font-black leading-none ${
+                        daysLeft < 0 ? "text-destructive" : daysLeft <= 3 ? "text-orange-500" : "text-green-600"
+                      }`}>
+                        {Math.abs(daysLeft)}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        {daysLeft < 0 ? "Hari Lewat" : "Sisa Hari"}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-0.5">
+                        <p className="text-2xl font-black leading-none">{booking.occupied_persons}</p>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-1">Penghuni</p>
+                    </div>
+                  </div>
+
+                  {/* Overdue warning */}
+                  {daysLeft < 0 && (
+                    <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg p-2.5 text-xs text-red-700">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                      Tanggal keluar sudah terlewat {Math.abs(daysLeft)} hari
+                    </div>
+                  )}
+
+                  {/* Expiring soon */}
+                  {daysLeft >= 0 && daysLeft <= 3 && (
+                    <div className="flex items-start gap-2 bg-orange-50 border border-orange-200 rounded-lg p-2.5 text-xs text-orange-700">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                      Akan check-out dalam {daysLeft} hari
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Notes */}
+              {booking.notes && (
+                <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 bg-muted/40 border-b flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Catatan</span>
+                  </div>
+                  <p className="p-4 text-sm leading-relaxed">{booking.notes}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center text-sm text-muted-foreground py-6">
+              Data tamu tidak tersedia.
+            </div>
+          )
+        )}
+
+        {/* Room notes (when not occupied) */}
+        {room.notes && !isOccupied && (
+          <div className="rounded-xl border bg-muted/30 p-3">
+            <p className="text-xs text-muted-foreground mb-1">Catatan Kamar</p>
+            <p className="text-sm">{room.notes}</p>
+          </div>
+        )}
+      </div>
+
+      {/* ── Action Buttons ── */}
+      <div className="p-4 border-t shrink-0 space-y-2 bg-background">
+
+        {/* Check-in */}
+        {room.status === "available" && (
+          <Button className="w-full h-11 text-sm font-semibold" onClick={onCheckin}>
+            <UserCheck className="w-4 h-4 mr-2" />
+            Check-in Tamu
+          </Button>
+        )}
+
+        {/* Check-out: normal button */}
+        {isOccupied && !checkoutConfirm && (
+          <Button
+            variant="secondary"
+            className="w-full h-11 text-sm font-semibold"
+            onClick={() => setCheckoutConfirm(true)}
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Check-out Tamu
+          </Button>
+        )}
+
+        {/* Check-out: confirmation */}
+        {isOccupied && checkoutConfirm && (
+          <div className="space-y-2">
+            <div className="rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs text-orange-800 text-center">
+              Konfirmasi check-out <strong>{booking?.guest_name}</strong>?
+            </div>
+            {checkoutError && (
+              <p className="text-xs text-destructive text-center">{checkoutError}</p>
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                className="h-9 text-sm"
+                onClick={() => { setCheckoutConfirm(false); setCheckoutError(null); }}
+                disabled={checkoutLoading}
+              >
+                Batal
+              </Button>
+              <Button
+                variant="destructive"
+                className="h-9 text-sm"
+                onClick={handleCheckout}
+                disabled={checkoutLoading}
+              >
+                {checkoutLoading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+                Ya, Check-out
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Secondary actions */}
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="outline" size="sm" className="h-8 text-xs">
+            <FileText className="w-3 h-3 mr-1.5" />
+            Edit Catatan
+          </Button>
+          {room.status === "blocked" ? (
+            <Button variant="outline" size="sm" className="h-8 text-xs text-green-600 hover:bg-green-50">
+              <Unlock className="w-3 h-3 mr-1.5" />
+              Buka Blokir
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" className="h-8 text-xs text-destructive hover:bg-destructive/10">
+              <Lock className="w-3 h-3 mr-1.5" />
+              Blokir Kamar
+            </Button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -161,13 +466,11 @@ function TR({ lbl, desc }: { lbl: string; desc: string }) {
 // ─── Main component ─────────────────────────────────────────────
 export default function FloorPlan() {
   const { data: rooms, isLoading, refetch } = useGetRooms();
-  const [selected, setSelected] = useState<Room | null>(null);
+  const [selected, setSelected]   = useState<Room | null>(null);
   const [checkinOpen, setCheckinOpen] = useState(false);
 
-  // Force fresh data every time the floor plan is opened
   useEffect(() => { refetch(); }, []);
 
-  // O(1) lookup instead of .find() on every cell
   const roomMap = useMemo(() => {
     const m = new Map<string, Room>();
     rooms?.forEach(r => m.set(r.number, r));
@@ -180,18 +483,6 @@ export default function FloorPlan() {
   const F = (lbl: string, col: number, row: number, span?: number) => (
     <FacilityCell key={`f-${lbl}-${row}`} lbl={lbl} col={col} row={row} span={span} />
   );
-
-  const typeLabel = (type: string) =>
-    type === "single" ? "Single Bed (★)" : type === "family" ? "Family Room (★★)" : "Long Stay / Big Room (★★★)";
-
-  const statusLabel = (s: string) => {
-    if (s === "available")        return "Tersedia";
-    if (s === "occupied_regular") return "Reguler";
-    if (s === "long_stay_japan")  return "Long Stay Jepang";
-    if (s === "long_stay_local")  return "Long Stay Lokal";
-    if (s === "blocked")          return "Diblokir";
-    return s;
-  };
 
   if (isLoading && !rooms) {
     return (
@@ -237,21 +528,16 @@ export default function FloorPlan() {
             background:"#495057",
             border:"2px solid #495057",
           }}>
-
-            {/* ══ LOBBY B — cols 1-3, rows 1-3 ══ */}
             <LobbyBlock col="1 / 4" row="1 / 4" label="Lobby B" />
 
-            {/* ══ BLOCK A TOP (row 1) ══ */}
             {R("21", 4,  1)}
             {R("23", 5,  1, 2)}
             {R("27", 7,  1, 2)}
             {R("31", 9,  1, 2)}
             {R("33", 11, 1)}
 
-            {/* ══ CORRIDOR A (row 2) ══ */}
             <CorridorH c1={4} c2={11} row={2} lbl="Coridor BLOK A" />
 
-            {/* ══ BLOCK A BOTTOM (row 3) ══ */}
             {F("Kitchen", 4, 3)}
             {F("20i",     5, 3)}
             {R("22",      6, 3)}
@@ -259,20 +545,13 @@ export default function FloorPlan() {
             {R("30",      9, 3, 2)}
             {F("Laundry", 11, 3)}
 
-            {/* ══ BLOCK C HEADER (row 4) ══ */}
             {F("Storage", 1, 4)}
             {F("Pantry",  3, 4)}
-
-            {/* ══ CORRIDOR C (col 2, rows 4-12) ══ */}
             <CorridorV col={2} r1={4} r2={12} lbl="Corridor C" />
 
-            {/* ══ BLOCK C LEFT (col 1, rows 5-12) ══ */}
             {(["18","16","14","12","10","8","6","2"] as const).map((n, i) => R(n, 1, 5+i))}
-
-            {/* ══ BLOCK C RIGHT (col 3, rows 5-12) ══ */}
             {(["19","17","15","11","7","5","3","1"] as const).map((n, i) => R(n, 3, 5+i))}
 
-            {/* ══ LEGEND (cols 4-11, rows 4-24) ══ */}
             <div style={{
               gridColumn:"4 / 12", gridRow:"4 / 25",
               display:"flex", flexDirection:"column",
@@ -294,34 +573,24 @@ export default function FloorPlan() {
               </div>
             </div>
 
-            {/* ══ MAIN LOBBY D SEPARATOR (rows 13-15) ══ */}
             <div style={{ gridColumn:"1 / 3", gridRow:"13", background:"#ced4da" }} />
             {F("Office",  3, 13)}
             <div style={{
               gridColumn:"1 / 4", gridRow:"14",
               display:"flex", alignItems:"center",
               background:"#ced4da", fontSize:9, fontWeight:700, color:"#374151", paddingLeft:8,
-            }}>
-              ◀ Main Lobby Blok D
-            </div>
+            }}>◀ Main Lobby Blok D</div>
             <div style={{ gridColumn:"1 / 3", gridRow:"15", background:"#ced4da" }} />
             {F("Storage", 3, 15)}
 
-            {/* ══ CORRIDOR E (col 2, rows 16-24) ══ */}
             <CorridorV col={2} r1={16} r2={24} lbl="Corridor E" />
-
-            {/* ══ BLOCK D/E LEFT (col 1, rows 16-24) ══ */}
             {(["34","36","38","40","42","44","46","48"] as const).map((n, i) => R(n, 1, 16+i))}
             {F("Panel Room", 1, 24)}
-
-            {/* ══ BLOCK D/E RIGHT (col 3, rows 16-24) ══ */}
             {(["35","37","39","41","43","45","47","49"] as const).map((n, i) => R(n, 3, 16+i))}
             {F("Server MID", 3, 24)}
 
-            {/* ══ LOBBY F — cols 1-3, rows 25-27 ══ */}
             <LobbyBlock col="1 / 4" row="25 / 28" label="Lobby Blok F" />
 
-            {/* ══ BLOCK G TOP (row 25) ══ */}
             {F("Kitchen", 4,  25)}
             {R("50",      5,  25)}
             {R("52",      6,  25)}
@@ -329,16 +598,13 @@ export default function FloorPlan() {
             {R("60",      9,  25, 2)}
             {F("Laundry", 11, 25)}
 
-            {/* ══ CORRIDOR G (row 26) ══ */}
             <CorridorH c1={4} c2={11} row={26} lbl="Coridor Blok G" />
 
-            {/* ══ BLOCK G BOTTOM (row 27) ══ */}
             {R("51", 4,  27)}
             {R("53", 5,  27)}
             {R("55", 6,  27, 2)}
             {R("61", 8,  27, 2)}
             {R("62", 10, 27, 2)}
-
           </div>
         </div>
       </div>
@@ -349,89 +615,20 @@ export default function FloorPlan() {
           room={selected}
           open={checkinOpen}
           onOpenChange={setCheckinOpen}
-          onSuccess={() => {
-            setCheckinOpen(false);
-            setSelected(null);
-            refetch();
-          }}
+          onSuccess={() => { setCheckinOpen(false); setSelected(null); refetch(); }}
         />
       )}
 
       {/* ── Room Detail Sheet ── */}
       <Sheet open={selected !== null} onOpenChange={open => !open && setSelected(null)}>
-        <SheetContent className="sm:max-w-sm border-l shadow-2xl">
+        <SheetContent className="sm:max-w-sm p-0 border-l shadow-2xl flex flex-col [&>button]:top-4 [&>button]:right-4">
           {selected && (
-            <div className="h-full flex flex-col">
-              <SheetHeader className="pb-4 border-b">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <SheetTitle className="text-2xl font-bold text-primary">Kamar {selected.number}</SheetTitle>
-                    <SheetDescription className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline">Blok {selected.block}</Badge>
-                      <BedDouble className="w-4 h-4" />
-                      <span>{typeLabel(selected.type)}</span>
-                    </SheetDescription>
-                  </div>
-                  <div className="px-2 py-1 rounded text-xs font-bold uppercase tracking-wide mt-1 shrink-0"
-                    style={{ background:sbg(selected.status), color:sfg(selected.status), border:"1px solid #6b7280" }}>
-                    {statusLabel(selected.status)}
-                  </div>
-                </div>
-              </SheetHeader>
-
-              <div className="py-5 flex-1 overflow-auto space-y-4">
-                {selected.status === "available" && (
-                  <div className="bg-green-50 border border-green-200 text-green-800 rounded-lg p-3 flex items-start gap-2 text-sm">
-                    <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
-                    <span>Kamar bersih dan siap untuk check-in.</span>
-                  </div>
-                )}
-                {["occupied_regular","long_stay_japan","long_stay_local"].includes(selected.status) && (
-                  <div className="rounded-lg border bg-card p-3 flex items-start gap-2 text-sm">
-                    <User className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />
-                    <span>Kamar sedang terisi. Buka menu <strong>Pemesanan</strong> untuk detail tamu.</span>
-                  </div>
-                )}
-                {selected.status === "blocked" && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm">
-                    Kamar ini sedang diblokir.
-                  </div>
-                )}
-                {selected.notes && (
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Catatan</p>
-                    <p className="text-sm bg-muted/40 rounded p-3 border">{selected.notes}</p>
-                  </div>
-                )}
-                <div className="rounded-lg bg-muted/30 border p-3 text-sm space-y-1">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Blok</span>
-                    <span className="font-medium">{selected.block}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tipe</span>
-                    <span className="font-medium">{"★".repeat(selected.stars)} — {typeLabel(selected.type)}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t space-y-2">
-                {selected.status === "available" && (
-                  <Button size="lg" className="w-full" onClick={() => setCheckinOpen(true)}>
-                    Check-in Tamu
-                  </Button>
-                )}
-                {["occupied_regular","long_stay_japan","long_stay_local"].includes(selected.status) && (
-                  <Button size="lg" variant="secondary" className="w-full">Check-out Tamu</Button>
-                )}
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" size="sm">Edit Catatan</Button>
-                  <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10">
-                    Block Kamar
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <RoomDetailContent
+              room={selected}
+              onClose={() => setSelected(null)}
+              onCheckin={() => setCheckinOpen(true)}
+              onRefresh={() => refetch()}
+            />
           )}
         </SheetContent>
       </Sheet>
