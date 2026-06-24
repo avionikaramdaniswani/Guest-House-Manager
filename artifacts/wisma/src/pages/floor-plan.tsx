@@ -32,6 +32,11 @@ const GROWS = [
   `${RH}px`, `${CHH}px`, `${RH}px`,
 ].join(" ");
 
+// ─── Room designation (fixed per property) ───────────────────────
+const JAPAN_LONGSTAY_ROOMS = new Set(["23","24","27","30","31","54","55","60"]);
+const LOCAL_LONGSTAY_ROOMS = new Set(["61","62"]);
+const LOCAL_SINGLE_ROOMS   = new Set(["51","53"]);
+
 // ─── Color helpers ───────────────────────────────────────────────
 function sbg(s: string) {
   if (s === "available")         return "#ffffff";
@@ -44,6 +49,18 @@ function sbg(s: string) {
 }
 function sfg(s: string) {
   return ["long_stay_japan","long_stay_local","blocked"].includes(s) ? "#fff" : "#111827";
+}
+function roomBg(status: string, number: string) {
+  if (status !== "available") return sbg(status);
+  if (JAPAN_LONGSTAY_ROOMS.has(number)) return "#f97316";
+  if (LOCAL_LONGSTAY_ROOMS.has(number)) return "#3b82f6";
+  if (LOCAL_SINGLE_ROOMS.has(number))   return "#60a5fa";
+  return "#ffffff";
+}
+function roomFg(status: string, number: string) {
+  if (status !== "available") return sfg(status);
+  if (JAPAN_LONGSTAY_ROOMS.has(number) || LOCAL_LONGSTAY_ROOMS.has(number) || LOCAL_SINGLE_ROOMS.has(number)) return "#fff";
+  return "#111827";
 }
 function statusLabel(s: string) {
   if (s === "available")        return "Tersedia";
@@ -92,8 +109,8 @@ const RoomCell = memo(({ n, room, col, row, span, onSelect }: RCProps) => {
         gridColumn: span ? `${col} / ${col + span}` : String(col), gridRow: String(row),
         display:"flex", alignItems:"center", justifyContent:"center",
         minWidth:0, minHeight:0, overflow:"hidden",
-        background: room ? sbg(room.status) : "#ffffff",
-        color: room ? sfg(room.status) : "#374151",
+        background: room ? roomBg(room.status, room.number) : "#ffffff",
+        color: room ? roomFg(room.status, room.number) : "#374151",
         cursor: room ? "pointer" : "default",
         flexDirection:"column", gap:1, padding:"0 2px", transition:"filter 0.1s",
       }}
@@ -525,8 +542,9 @@ export default function FloorPlan() {
           {[
             { bg:"#ffffff", label:"Tersedia" },
             { bg:"#fde68a", label:"Reguler" },
-            { bg:"#f97316", label:"Long Stay Jepang" },
-            { bg:"#3b82f6", label:"Long Stay Lokal" },
+            { bg:"#f97316", label:"Long Stay Jepang (★★★)" },
+            { bg:"#3b82f6", label:"Long Stay Lokal (★★★)" },
+            { bg:"#60a5fa", label:"Lokal (★)" },
             { bg:"#ef4444", label:"Diblokir" },
           ].map(({ bg, label }) => (
             <div key={label} className="flex items-center gap-1.5">
