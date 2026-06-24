@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, memo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGetRooms, useGetRoom, getGetRoomsQueryKey } from "@workspace/api-client-react";
-import { Drawer, DrawerContent } from "@/components/ui/drawer";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import type { Room } from "@workspace/api-client-react";
 import CheckinDialog from "@/components/checkin-dialog";
@@ -222,7 +222,7 @@ function RoomDetailContent({
   }
 
   return (
-    <div className="flex flex-col overflow-hidden" style={{ maxHeight: "80vh" }}>
+    <div className="h-full flex flex-col overflow-hidden">
 
       {/* ── Colored Header ── */}
       <div
@@ -636,9 +636,9 @@ export default function FloorPlan() {
         />
       )}
 
-      {/* ── Room Detail Bottom Sheet ── */}
-      <Drawer open={selected !== null} onOpenChange={open => !open && setSelected(null)}>
-        <DrawerContent className="max-h-[85vh] flex flex-col p-0 [&>div:first-child]:mx-auto [&>div:first-child]:mt-3">
+      {/* ── Room Detail Sheet ── */}
+      <Sheet open={selected !== null} onOpenChange={open => !open && setSelected(null)}>
+        <SheetContent className="sm:max-w-sm p-0 border-l shadow-2xl flex flex-col [&>button]:top-4 [&>button]:right-4">
           {selected && (
             <RoomDetailContent
               room={selected}
@@ -647,8 +647,8 @@ export default function FloorPlan() {
               onRefresh={() => refetch()}
             />
           )}
-        </DrawerContent>
-      </Drawer>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
