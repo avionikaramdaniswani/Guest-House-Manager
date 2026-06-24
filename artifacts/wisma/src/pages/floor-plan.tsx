@@ -37,6 +37,7 @@ function sbg(s: string) {
   if (s === "long_stay_japan")   return "#f97316";
   if (s === "long_stay_local")   return "#3b82f6";
   if (s === "blocked")           return "#ef4444";
+  if (s === "facility")          return "#dee2e6";
   return "#ffffff";
 }
 function sfg(s: string) {
@@ -67,25 +68,41 @@ const CORRIDOR_BG = "#f1f3f5";
 type SelectFn = (room: Room) => void;
 
 interface RCProps { n: string; room: Room | undefined; col: number; row: number; span?: number; onSelect: SelectFn; }
-const RoomCell = memo(({ n, room, col, row, span, onSelect }: RCProps) => (
-  <button
-    onClick={() => room && onSelect(room)}
-    style={{
-      gridColumn: span ? `${col} / ${col + span}` : String(col), gridRow: String(row),
-      display:"flex", alignItems:"center", justifyContent:"center",
-      minWidth:0, minHeight:0, overflow:"hidden",
-      background: room ? sbg(room.status) : "#ffffff",
-      color: room ? sfg(room.status) : "#374151",
-      cursor: room ? "pointer" : "default",
-      flexDirection:"column", gap:1, padding:"0 2px", transition:"filter 0.1s",
-    }}
-    onMouseEnter={e => room && (e.currentTarget.style.filter = "brightness(0.92)")}
-    onMouseLeave={e => (e.currentTarget.style.filter = "")}
-  >
-    <span style={{ fontWeight:800, fontSize:11, lineHeight:1 }}>{n}</span>
-    {(room?.stars ?? 0) > 0 && <span style={{ fontSize:8, lineHeight:1 }}>{"★".repeat(room!.stars)}</span>}
-  </button>
-));
+const RoomCell = memo(({ n, room, col, row, span, onSelect }: RCProps) => {
+  const isFacility = room?.status === "facility" || room?.is_facility;
+  if (isFacility) {
+    return (
+      <div style={{
+        gridColumn: span ? `${col} / ${col + span}` : String(col), gridRow: String(row),
+        display:"flex", alignItems:"center", justifyContent:"center",
+        minWidth:0, minHeight:0, overflow:"hidden",
+        background: FACILITY_BG, fontSize:9, fontWeight:700, color:"#374151",
+        textAlign:"center", padding:"0 3px", lineHeight:1.2,
+      }}>
+        {room?.room_name ?? n}
+      </div>
+    );
+  }
+  return (
+    <button
+      onClick={() => room && onSelect(room)}
+      style={{
+        gridColumn: span ? `${col} / ${col + span}` : String(col), gridRow: String(row),
+        display:"flex", alignItems:"center", justifyContent:"center",
+        minWidth:0, minHeight:0, overflow:"hidden",
+        background: room ? sbg(room.status) : "#ffffff",
+        color: room ? sfg(room.status) : "#374151",
+        cursor: room ? "pointer" : "default",
+        flexDirection:"column", gap:1, padding:"0 2px", transition:"filter 0.1s",
+      }}
+      onMouseEnter={e => room && (e.currentTarget.style.filter = "brightness(0.92)")}
+      onMouseLeave={e => (e.currentTarget.style.filter = "")}
+    >
+      <span style={{ fontWeight:800, fontSize:11, lineHeight:1 }}>{n}</span>
+      {(room?.stars ?? 0) > 0 && <span style={{ fontSize:8, lineHeight:1 }}>{"★".repeat(room!.stars)}</span>}
+    </button>
+  );
+});
 
 interface FCProps { lbl: string; col: number; row: number; span?: number; }
 const FacilityCell = memo(({ lbl, col, row, span }: FCProps) => (
