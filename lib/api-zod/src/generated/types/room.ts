@@ -14,9 +14,10 @@ export interface Room {
   number: string;
   block: RoomBlock;
   type: RoomType;
-  /** 1=Double Bed, 2=Family, 3=Long Stay/Big Room */
+  /** 1=Single/Double Bed, 2=Family Room, 3=Long Stay/Big Room */
   stars: number;
-  price_per_night: number;
+  /** @nullable */
+  room_name?: string | null;
   status: RoomStatus;
   /** @nullable */
   notes?: string | null;

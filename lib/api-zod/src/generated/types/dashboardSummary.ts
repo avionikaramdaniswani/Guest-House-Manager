@@ -14,6 +14,4 @@ export interface DashboardSummary {
   long_stay_local: number;
   blocked: number;
   occupancy_rate: number;
-  revenue_today: number;
-  revenue_month: number;
 }

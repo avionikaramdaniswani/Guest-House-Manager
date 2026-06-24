@@ -13,7 +13,8 @@ export interface RoomDetail {
   block: string;
   type: string;
   stars: number;
-  price_per_night: number;
+  /** @nullable */
+  room_name?: string | null;
   status: string;
   /** @nullable */
   notes?: string | null;

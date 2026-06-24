@@ -14,7 +14,10 @@ export interface Booking {
   room_number: string;
   guest_id: number;
   guest_name: string;
-  guest_nationality: string;
+  /** @nullable */
+  guest_company?: string | null;
+  /** @nullable */
+  guest_nationality?: string | null;
   check_in_date: Date;
   check_out_date: Date;
   /** @nullable */
@@ -23,7 +26,8 @@ export interface Booking {
   actual_check_out?: Date | null;
   status: BookingStatus;
   stay_type: BookingStayType;
-  price_per_night: number;
+  occupied_persons?: number;
+  price_per_night?: number;
   /** @nullable */
   total_amount?: number | null;
   /** @nullable */

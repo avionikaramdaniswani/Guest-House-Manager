@@ -78,9 +78,10 @@ export interface Room {
   number: string;
   block: RoomBlock;
   type: RoomType;
-  /** 1=Double Bed, 2=Family, 3=Long Stay/Big Room */
+  /** 1=Single/Double Bed, 2=Family Room, 3=Long Stay/Big Room */
   stars: number;
-  price_per_night: number;
+  /** @nullable */
+  room_name?: string | null;
   status: RoomStatus;
   /** @nullable */
   notes?: string | null;
@@ -111,7 +112,10 @@ export interface Booking {
   room_number: string;
   guest_id: number;
   guest_name: string;
-  guest_nationality: string;
+  /** @nullable */
+  guest_company?: string | null;
+  /** @nullable */
+  guest_nationality?: string | null;
   check_in_date: string;
   check_out_date: string;
   /** @nullable */
@@ -120,7 +124,8 @@ export interface Booking {
   actual_check_out?: string | null;
   status: BookingStatus;
   stay_type: BookingStayType;
-  price_per_night: number;
+  occupied_persons?: number;
+  price_per_night?: number;
   /** @nullable */
   total_amount?: number | null;
   /** @nullable */
@@ -138,7 +143,8 @@ export interface RoomDetail {
   block: string;
   type: string;
   stars: number;
-  price_per_night: number;
+  /** @nullable */
+  room_name?: string | null;
   status: string;
   /** @nullable */
   notes?: string | null;
@@ -294,8 +300,6 @@ export interface DashboardSummary {
   long_stay_local: number;
   blocked: number;
   occupancy_rate: number;
-  revenue_today: number;
-  revenue_month: number;
 }
 
 export interface TodayActivity {

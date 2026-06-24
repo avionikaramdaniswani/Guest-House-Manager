@@ -596,9 +596,9 @@ components:
           enum: [single, double, family]
         stars:
           type: integer
-          description: "1=Double Bed, 2=Family, 3=Long Stay/Big Room"
-        price_per_night:
-          type: integer
+          description: "1=Single/Double Bed, 2=Family Room, 3=Long Stay/Big Room"
+        room_name:
+          type: ["string", "null"]
         status:
           type: string
           enum: [available, occupied_regular, long_stay_japan, long_stay_local, blocked, facility]
@@ -612,7 +612,6 @@ components:
         - block
         - type
         - stars
-        - price_per_night
         - status
         - is_facility
 
@@ -629,8 +628,8 @@ components:
           type: string
         stars:
           type: integer
-        price_per_night:
-          type: integer
+        room_name:
+          type: ["string", "null"]
         status:
           type: string
         notes:
@@ -646,7 +645,6 @@ components:
         - block
         - type
         - stars
-        - price_per_night
         - status
         - is_facility
 
@@ -733,8 +731,10 @@ components:
           type: integer
         guest_name:
           type: string
+        guest_company:
+          type: ["string", "null"]
         guest_nationality:
-          type: string
+          type: ["string", "null"]
         check_in_date:
           type: string
           format: date
@@ -753,6 +753,8 @@ components:
         stay_type:
           type: string
           enum: [regular, long_stay]
+        occupied_persons:
+          type: integer
         price_per_night:
           type: integer
         total_amount:
@@ -772,12 +774,10 @@ components:
         - room_number
         - guest_id
         - guest_name
-        - guest_nationality
         - check_in_date
         - check_out_date
         - status
         - stay_type
-        - price_per_night
         - created_at
 
     BookingInput:
@@ -894,10 +894,6 @@ components:
           type: integer
         occupancy_rate:
           type: number
-        revenue_today:
-          type: integer
-        revenue_month:
-          type: integer
       required:
         - total_rooms
         - occupied
@@ -906,8 +902,6 @@ components:
         - long_stay_local
         - blocked
         - occupancy_rate
-        - revenue_today
-        - revenue_month
 
     TodayActivity:
       type: object
