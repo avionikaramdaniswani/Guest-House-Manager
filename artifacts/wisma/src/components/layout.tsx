@@ -238,7 +238,7 @@ export function Layout({ children }: LayoutProps) {
 
       {/* ── Desktop sidebar ── */}
       <aside
-        className={`hidden md:flex flex-col bg-sidebar border-r border-sidebar-border shrink-0 transition-[width] duration-200 ease-in-out overflow-hidden ${
+        className={`hidden md:flex flex-col bg-sidebar border-r border-sidebar-border shrink-0 transition-[width] duration-200 ease-in-out overflow-hidden h-screen sticky top-0 ${
           collapsed ? "w-[60px]" : "w-60"
         }`}
       >
