@@ -1,6 +1,7 @@
 - [Room type enum](room-type-enum.md) — Zod schema pakai 'single'|'double'|'family', bukan 'standard'/'longstay'. Stars: single=1★, family=2★★, double=3★★★.
 - [Floor plan performance](floor-plan-perf.md) — Jangan definisikan sub-komponen (RC, FC, dll.) di dalam fungsi utama; pindahkan ke luar dan pakai memo + Map lookup.
 - [PMS schema — no pricing](pms-schema-no-pricing.md) — Free hotel: rooms table has NO price_per_night (dropped). bookings keeps pricePerNight=0 for compat. Added: rooms.room_name, guests.company, bookings.occupied_persons.
-- [API server build](api-server-build.md) — Uses esbuild (build.mjs), NOT tsx watch mode. Must restart "artifacts/api-server: API Server" workflow after any schema/route changes to recompile dist/index.mjs.
-- [Direct check-in endpoint](direct-checkin.md) — POST /api/direct-checkin: one-step creates guest+booking(checked_in)+updates room status. Registered BEFORE /bookings/:id in bookings.ts to avoid param capture.
+- [API server build](api-server-build.md) — Uses esbuild (build.mjs), NOT tsx watch mode. Must restart "Start application" workflow after any schema/route changes to recompile dist/index.mjs.
+- [Direct check-in endpoint](direct-checkin.md) — POST /api/direct-checkin: DirectCheckInBody/Response defined INLINE in bookings.ts (not from api-zod). zod must be direct dep of api-server package.
 - [Check-in dialog](checkin-dialog.md) — artifacts/wisma/src/components/checkin-dialog.tsx — full check-in form; uses fetch+getToken() (not customFetch) to call /api/direct-checkin; invalidates getGetRoomsQueryKey on success.
+- [RBAC auth system](rbac-auth.md) — Email+password login, roles: viewer/operator/admin. users table + bcrypt. AuthContext at wisma/src/contexts/auth-context.tsx. Nav filtered by role in layout.tsx. requireAuth/requireRole exported from api-server auth.ts.

@@ -7,9 +7,7 @@
  */
 
 export interface LoginInput {
-  /**
-     * @minLength 4
-     * @maxLength 4
-     */
-  pin: string;
+  email: string;
+  /** @minLength 6 */
+  password: string;
 }

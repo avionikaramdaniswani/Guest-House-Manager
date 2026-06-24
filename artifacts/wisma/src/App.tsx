@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
 import { useEffect } from "react";
-import { getToken } from "@/lib/auth";
+import { AuthProvider, useAuth, type UserRole } from "@/contexts/auth-context";
 
 import { Layout } from "@/components/layout";
 import Login from "@/pages/login";
@@ -18,17 +18,40 @@ import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+const routeRoles: Record<string, UserRole[]> = {
+  "/":           ["viewer", "operator", "admin"],
+  "/floor-plan": ["viewer", "operator", "admin"],
+  "/bookings":   ["operator", "admin"],
+  "/guests":     ["operator", "admin"],
+  "/reports":    ["viewer", "admin"],
+  "/settings":   ["admin"],
+};
+
+function ProtectedRoute({
+  component: Component,
+  path,
+}: {
+  component: React.ComponentType;
+  path: string;
+}) {
   const [location, setLocation] = useLocation();
-  const token = getToken();
+  const { isAuthenticated, canAccess } = useAuth();
 
   useEffect(() => {
-    if (!token && location !== "/login") {
+    if (!isAuthenticated) {
       setLocation("/login");
+      return;
     }
-  }, [token, location, setLocation]);
+    const allowed = routeRoles[path] ?? [];
+    if (allowed.length > 0 && !canAccess(allowed)) {
+      setLocation("/");
+    }
+  }, [isAuthenticated, location]);
 
-  if (!token) return null;
+  if (!isAuthenticated) return null;
+
+  const allowed = routeRoles[path] ?? [];
+  if (allowed.length > 0 && !canAccess(allowed)) return null;
 
   return (
     <Layout>
@@ -41,12 +64,12 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
-      <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
-      <Route path="/floor-plan" component={() => <ProtectedRoute component={FloorPlan} />} />
-      <Route path="/bookings" component={() => <ProtectedRoute component={Bookings} />} />
-      <Route path="/guests" component={() => <ProtectedRoute component={Guests} />} />
-      <Route path="/reports" component={() => <ProtectedRoute component={Reports} />} />
-      <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
+      <Route path="/"           component={() => <ProtectedRoute path="/"           component={Dashboard} />} />
+      <Route path="/floor-plan" component={() => <ProtectedRoute path="/floor-plan" component={FloorPlan} />} />
+      <Route path="/bookings"   component={() => <ProtectedRoute path="/bookings"   component={Bookings} />} />
+      <Route path="/guests"     component={() => <ProtectedRoute path="/guests"     component={Guests} />} />
+      <Route path="/reports"    component={() => <ProtectedRoute path="/reports"    component={Reports} />} />
+      <Route path="/settings"   component={() => <ProtectedRoute path="/settings"   component={Settings} />} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -57,10 +80,12 @@ function App() {
     <ThemeProvider attribute="class" defaultTheme="light">
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
-          <Toaster />
+          <AuthProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+            <Toaster />
+          </AuthProvider>
         </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>

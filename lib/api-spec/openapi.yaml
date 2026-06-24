@@ -41,7 +41,7 @@ paths:
     post:
       operationId: login
       tags: [auth]
-      summary: Login with 4-digit PIN
+      summary: Login with email and password
       requestBody:
         required: true
         content:
@@ -56,7 +56,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AuthResult"
         "401":
-          description: Invalid PIN
+          description: Invalid credentials
           content:
             application/json:
               schema:
@@ -66,7 +66,7 @@ paths:
     get:
       operationId: verifySession
       tags: [auth]
-      summary: Verify session token
+      summary: Verify session token and get current user
       responses:
         "200":
           description: Session valid
@@ -76,6 +76,24 @@ paths:
                 $ref: "#/components/schemas/AuthResult"
         "401":
           description: Invalid or expired session
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout and invalidate session
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required:
+                  - ok
 
   /rooms:
     get:
@@ -524,23 +542,44 @@ components:
     LoginInput:
       type: object
       properties:
-        pin:
+        email:
           type: string
-          minLength: 4
-          maxLength: 4
+          format: email
+        password:
+          type: string
+          minLength: 6
       required:
-        - pin
+        - email
+        - password
+
+    UserInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [viewer, operator, admin]
+      required:
+        - id
+        - email
+        - name
+        - role
 
     AuthResult:
       type: object
       properties:
         token:
           type: string
-        staff:
-          type: string
+        user:
+          $ref: "#/components/schemas/UserInfo"
       required:
         - token
-        - staff
+        - user
 
     Room:
       type: object

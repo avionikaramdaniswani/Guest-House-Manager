@@ -14,16 +14,30 @@ export interface ErrorResponse {
 }
 
 export interface LoginInput {
-  /**
-     * @minLength 4
-     * @maxLength 4
-     */
-  pin: string;
+  email: string;
+  /** @minLength 6 */
+  password: string;
+}
+
+export type UserInfoRole = typeof UserInfoRole[keyof typeof UserInfoRole];
+
+
+export const UserInfoRole = {
+  viewer: 'viewer',
+  operator: 'operator',
+  admin: 'admin',
+} as const;
+
+export interface UserInfo {
+  id: number;
+  email: string;
+  name: string;
+  role: UserInfoRole;
 }
 
 export interface AuthResult {
   token: string;
-  staff: string;
+  user: UserInfo;
 }
 
 export type RoomBlock = typeof RoomBlock[keyof typeof RoomBlock];
@@ -66,8 +80,7 @@ export interface Room {
   type: RoomType;
   /** 1=Double Bed, 2=Family, 3=Long Stay/Big Room */
   stars: number;
-  /** @nullable */
-  room_name?: string | null;
+  price_per_night: number;
   status: RoomStatus;
   /** @nullable */
   notes?: string | null;
@@ -89,8 +102,7 @@ export type BookingStayType = typeof BookingStayType[keyof typeof BookingStayTyp
 
 export const BookingStayType = {
   regular: 'regular',
-  long_stay_japan: 'long_stay_japan',
-  long_stay_local: 'long_stay_local',
+  long_stay: 'long_stay',
 } as const;
 
 export interface Booking {
@@ -99,8 +111,7 @@ export interface Booking {
   room_number: string;
   guest_id: number;
   guest_name: string;
-  /** @nullable */
-  guest_company?: string | null;
+  guest_nationality: string;
   check_in_date: string;
   check_out_date: string;
   /** @nullable */
@@ -109,7 +120,13 @@ export interface Booking {
   actual_check_out?: string | null;
   status: BookingStatus;
   stay_type: BookingStayType;
-  occupied_persons: number;
+  price_per_night: number;
+  /** @nullable */
+  total_amount?: number | null;
+  /** @nullable */
+  deposit?: number | null;
+  /** @nullable */
+  payment_method?: string | null;
   /** @nullable */
   notes?: string | null;
   created_at: string;
@@ -121,8 +138,7 @@ export interface RoomDetail {
   block: string;
   type: string;
   stars: number;
-  /** @nullable */
-  room_name?: string | null;
+  price_per_night: number;
   status: string;
   /** @nullable */
   notes?: string | null;
@@ -159,8 +175,11 @@ export const GuestIdType = {
 export interface Guest {
   id: number;
   name: string;
+  id_number: string;
+  id_type: GuestIdType;
+  nationality: string;
   /** @nullable */
-  company?: string | null;
+  phone?: string | null;
   created_at: string;
 }
 
@@ -174,14 +193,19 @@ export const GuestInputIdType = {
 
 export interface GuestInput {
   name: string;
-  /** @nullable */
-  company?: string | null;
+  id_number: string;
+  id_type: GuestInputIdType;
+  nationality: string;
+  phone?: string;
 }
 
 export interface GuestUpdate {
   name?: string;
+  id_number?: string;
+  id_type?: string;
+  nationality?: string;
   /** @nullable */
-  company?: string | null;
+  phone?: string | null;
 }
 
 export type BookingInputStayType = typeof BookingInputStayType[keyof typeof BookingInputStayType];
@@ -189,8 +213,7 @@ export type BookingInputStayType = typeof BookingInputStayType[keyof typeof Book
 
 export const BookingInputStayType = {
   regular: 'regular',
-  long_stay_japan: 'long_stay_japan',
-  long_stay_local: 'long_stay_local',
+  long_stay: 'long_stay',
 } as const;
 
 export interface BookingInput {
@@ -201,7 +224,9 @@ export interface BookingInput {
   check_in_date: string;
   check_out_date: string;
   stay_type: BookingInputStayType;
-  occupied_persons?: number;
+  price_per_night: number;
+  /** @nullable */
+  deposit?: number | null;
   /** @nullable */
   notes?: string | null;
 }
@@ -219,7 +244,9 @@ export const BookingUpdateStatus = {
 export interface BookingUpdate {
   check_in_date?: string;
   check_out_date?: string;
-  occupied_persons?: number;
+  price_per_night?: number;
+  /** @nullable */
+  deposit?: number | null;
   /** @nullable */
   notes?: string | null;
   status?: BookingUpdateStatus;
@@ -342,6 +369,10 @@ export interface ActivityLog {
   guest_name?: string | null;
   created_at: string;
 }
+
+export type Logout200 = {
+  ok: boolean;
+};
 
 export type GetGuestsParams = {
 active?: boolean;

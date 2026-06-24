@@ -5,9 +5,7 @@
  * Wisma Eucaliptus / Guest House Deluxe - Property Management System API
  * OpenAPI spec version: 0.1.0
  */
-import type { UserInfo } from './userInfo';
 
-export interface AuthResult {
-  token: string;
-  user: UserInfo;
-}
+export type Logout200 = {
+  ok: boolean;
+};

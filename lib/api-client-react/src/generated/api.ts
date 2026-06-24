@@ -42,6 +42,7 @@ import type {
   GuestUpdate,
   HealthStatus,
   LoginInput,
+  Logout200,
   MonthlyReport,
   OccupancyDataPoint,
   Room,
@@ -150,7 +151,7 @@ export const getLoginUrl = () => {
 }
 
 /**
- * @summary Login with 4-digit PIN
+ * @summary Login with email and password
  */
 export const login = async (loginInput: LoginInput, options?: RequestInit): Promise<AuthResult> => {
 
@@ -199,7 +200,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type LoginMutationError = ErrorType<ErrorResponse>
 
     /**
- * @summary Login with 4-digit PIN
+ * @summary Login with email and password
  */
 export const useLogin = <TError = ErrorType<ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: BodyType<LoginInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -221,7 +222,7 @@ export const getVerifySessionUrl = () => {
 }
 
 /**
- * @summary Verify session token
+ * @summary Verify session token and get current user
  */
 export const verifySession = async ( options?: RequestInit): Promise<AuthResult> => {
 
@@ -268,7 +269,7 @@ export type VerifySessionQueryError = ErrorType<void>
 
 
 /**
- * @summary Verify session token
+ * @summary Verify session token and get current user
  */
 
 export function useVerifySession<TData = Awaited<ReturnType<typeof verifySession>>, TError = ErrorType<void>>(
@@ -288,6 +289,76 @@ export function useVerifySession<TData = Awaited<ReturnType<typeof verifySession
 
 
 
+
+export const getLogoutUrl = () => {
+
+
+
+
+  return `/api/auth/logout`
+}
+
+/**
+ * @summary Logout and invalidate session
+ */
+export const logout = async ( options?: RequestInit): Promise<Logout200> => {
+
+  return customFetch<Logout200>(getLogoutUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getLogoutMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext> => {
+
+const mutationKey = ['logout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logout>>, void> = () => {
+
+
+          return  logout(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LogoutMutationResult = NonNullable<Awaited<ReturnType<typeof logout>>>
+
+    export type LogoutMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Logout and invalidate session
+ */
+export const useLogout = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof logout>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getLogoutMutationOptions(options));
+    }
 
 export const getGetRoomsUrl = () => {
 

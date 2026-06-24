@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { clearToken } from "@/lib/auth";
+import { useAuth, type UserRole } from "@/contexts/auth-context";
 import {
   LayoutDashboard,
   Map,
@@ -15,6 +15,7 @@ import {
   PanelLeftOpen,
   Menu,
   X,
+  ShieldCheck,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -22,27 +23,48 @@ interface LayoutProps {
   children: ReactNode;
 }
 
-const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/floor-plan", label: "Denah Lantai", icon: Map },
-  { href: "/bookings", label: "Pemesanan", icon: CalendarDays },
-  { href: "/guests", label: "Tamu", icon: Users },
-  { href: "/reports", label: "Laporan", icon: BarChart3 },
-  { href: "/settings", label: "Pengaturan", icon: Settings },
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  roles: UserRole[];
+}
+
+const navItems: NavItem[] = [
+  { href: "/",           label: "Dashboard",    icon: LayoutDashboard, roles: ["viewer", "operator", "admin"] },
+  { href: "/floor-plan", label: "Denah Lantai", icon: Map,             roles: ["viewer", "operator", "admin"] },
+  { href: "/bookings",   label: "Pemesanan",    icon: CalendarDays,    roles: ["operator", "admin"] },
+  { href: "/guests",     label: "Tamu",         icon: Users,           roles: ["operator", "admin"] },
+  { href: "/reports",    label: "Laporan",      icon: BarChart3,       roles: ["viewer", "admin"] },
+  { href: "/settings",   label: "Pengaturan",   icon: Settings,        roles: ["admin"] },
 ];
+
+const roleBadgeColor: Record<UserRole, string> = {
+  admin:    "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  operator: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  viewer:   "bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-gray-300",
+};
+
+const roleLabel: Record<UserRole, string> = {
+  admin:    "Admin",
+  operator: "Operator",
+  viewer:   "Viewer",
+};
 
 function NavLinks({
   location,
   collapsed,
+  visibleItems,
   onNav,
 }: {
   location: string;
   collapsed: boolean;
+  visibleItems: NavItem[];
   onNav?: () => void;
 }) {
   return (
     <nav className="flex-1 px-3 py-2 space-y-0.5">
-      {navItems.map((item) => {
+      {visibleItems.map((item) => {
         const isActive = location === item.href;
         const Icon = item.icon;
         return (
@@ -73,9 +95,12 @@ export function Layout({ children }: LayoutProps) {
   const { theme, setTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, logout, canAccess } = useAuth();
 
-  const handleLogout = () => {
-    clearToken();
+  const visibleItems = navItems.filter(item => canAccess(item.roles));
+
+  const handleLogout = async () => {
+    await logout();
     setLocation("/login");
   };
 
@@ -124,7 +149,24 @@ export function Layout({ children }: LayoutProps) {
             <X className="w-4 h-4" />
           </button>
         </div>
-        <NavLinks location={location} collapsed={false} onNav={() => setMobileOpen(false)} />
+        <NavLinks location={location} collapsed={false} visibleItems={visibleItems} onNav={() => setMobileOpen(false)} />
+        {/* Mobile user info */}
+        {user && (
+          <div className="px-4 py-3 border-t border-sidebar-border shrink-0">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-sidebar-foreground truncate">{user.name}</p>
+                <p className="text-[10px] text-sidebar-foreground/50 truncate">{user.email}</p>
+              </div>
+            </div>
+            <span className={`inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full ${roleBadgeColor[user.role]}`}>
+              {roleLabel[user.role]}
+            </span>
+          </div>
+        )}
         {/* Mobile footer */}
         <div className="px-3 pb-4 pt-2 border-t border-sidebar-border shrink-0 space-y-0.5">
           <button
@@ -170,10 +212,28 @@ export function Layout({ children }: LayoutProps) {
           </button>
         </div>
 
-        <NavLinks location={location} collapsed={collapsed} />
+        <NavLinks location={location} collapsed={collapsed} visibleItems={visibleItems} />
+
+        {/* Desktop user info */}
+        {user && !collapsed && (
+          <div className="px-4 py-3 border-t border-sidebar-border shrink-0">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-sidebar-foreground truncate">{user.name}</p>
+                <p className="text-[10px] text-sidebar-foreground/50 truncate">{user.email}</p>
+              </div>
+            </div>
+            <span className={`inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full ${roleBadgeColor[user.role]}`}>
+              {roleLabel[user.role]}
+            </span>
+          </div>
+        )}
 
         {/* Desktop footer */}
-        <div className={`px-3 pb-4 pt-2 border-t border-sidebar-border shrink-0 space-y-0.5 ${collapsed ? "px-2" : ""}`}>
+        <div className={`px-3 pb-4 pt-2 border-t border-sidebar-border shrink-0 space-y-0.5`}>
           <button
             onClick={() => setTheme(isDark ? "light" : "dark")}
             title={collapsed ? (isDark ? "Mode Terang" : "Mode Gelap") : undefined}

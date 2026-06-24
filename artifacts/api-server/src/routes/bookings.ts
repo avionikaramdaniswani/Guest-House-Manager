@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, desc } from "drizzle-orm";
+import { z } from "zod";
 import { db, bookingsTable, guestsTable, roomsTable, activityLogsTable } from "@workspace/db";
 import {
   GetBookingsResponse,
@@ -16,9 +17,20 @@ import {
   CheckOutParams,
   CheckOutBody,
   CheckOutResponse,
-  DirectCheckInBody,
-  DirectCheckInResponse,
 } from "@workspace/api-zod";
+
+const DirectCheckInBody = z.object({
+  room_id:          z.number().int(),
+  guest_name:       z.string().min(1),
+  company:          z.string().nullish(),
+  check_in_date:    z.string(),
+  check_out_date:   z.string(),
+  stay_type:        z.enum(["regular", "long_stay"]),
+  occupied_persons: z.number().int().default(1),
+  notes:            z.string().nullish(),
+});
+
+const DirectCheckInResponse = GetBookingResponse;
 
 const router: IRouter = Router();
 

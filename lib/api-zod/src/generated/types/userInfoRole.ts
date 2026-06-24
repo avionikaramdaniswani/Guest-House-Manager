@@ -6,10 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type BookingInputStayType = typeof BookingInputStayType[keyof typeof BookingInputStayType];
+export type UserInfoRole = typeof UserInfoRole[keyof typeof UserInfoRole];
 
 
-export const BookingInputStayType = {
-  regular: 'regular',
-  long_stay: 'long_stay',
+export const UserInfoRole = {
+  viewer: 'viewer',
+  operator: 'operator',
+  admin: 'admin',
 } as const;
