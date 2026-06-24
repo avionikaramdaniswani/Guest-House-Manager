@@ -13,18 +13,20 @@ import FloorPlan from "@/pages/floor-plan";
 import Bookings from "@/pages/bookings";
 import Guests from "@/pages/guests";
 import Reports from "@/pages/reports";
+import ActivityLog from "@/pages/activity-log";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
 
 const routeRoles: Record<string, UserRole[]> = {
-  "/":           ["viewer", "operator", "admin"],
-  "/floor-plan": ["viewer", "operator", "admin"],
-  "/bookings":   ["operator", "admin"],
-  "/guests":     ["operator", "admin"],
-  "/reports":    ["viewer", "admin"],
-  "/settings":   ["admin"],
+  "/":             ["viewer", "operator", "admin"],
+  "/floor-plan":   ["viewer", "operator", "admin"],
+  "/bookings":     ["operator", "admin"],
+  "/guests":       ["operator", "admin"],
+  "/reports":      ["viewer", "admin"],
+  "/activity-log": ["admin"],
+  "/settings":     ["admin"],
 };
 
 function ProtectedRoute({
@@ -68,8 +70,9 @@ function Router() {
       <Route path="/floor-plan" component={() => <ProtectedRoute path="/floor-plan" component={FloorPlan} />} />
       <Route path="/bookings"   component={() => <ProtectedRoute path="/bookings"   component={Bookings} />} />
       <Route path="/guests"     component={() => <ProtectedRoute path="/guests"     component={Guests} />} />
-      <Route path="/reports"    component={() => <ProtectedRoute path="/reports"    component={Reports} />} />
-      <Route path="/settings"   component={() => <ProtectedRoute path="/settings"   component={Settings} />} />
+      <Route path="/reports"      component={() => <ProtectedRoute path="/reports"      component={Reports} />} />
+      <Route path="/activity-log" component={() => <ProtectedRoute path="/activity-log" component={ActivityLog} />} />
+      <Route path="/settings"     component={() => <ProtectedRoute path="/settings"     component={Settings} />} />
       <Route component={NotFound} />
     </Switch>
   );

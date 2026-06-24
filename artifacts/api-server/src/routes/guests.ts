@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, ilike, or, desc } from "drizzle-orm";
-import { db, guestsTable } from "@workspace/db";
+import { db, guestsTable, bookingsTable, roomsTable } from "@workspace/db";
 import {
   GetGuestsResponse,
   GetGuestResponse,
@@ -59,6 +59,47 @@ router.get("/guests/:id", async (req, res): Promise<void> => {
   const [guest] = await db.select().from(guestsTable).where(eq(guestsTable.id, params.data.id));
   if (!guest) { res.status(404).json({ error: "Tamu tidak ditemukan" }); return; }
   res.json(GetGuestResponse.parse(toGuestShape(guest)));
+});
+
+router.get("/guests/:id/bookings", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const guestId = parseInt(raw, 10);
+  if (isNaN(guestId)) { res.status(400).json({ error: "Invalid guest ID" }); return; }
+
+  const rows = await db
+    .select({
+      id: bookingsTable.id,
+      room_id: bookingsTable.roomId,
+      room_number: roomsTable.number,
+      check_in_date: bookingsTable.checkInDate,
+      check_out_date: bookingsTable.checkOutDate,
+      actual_check_in: bookingsTable.actualCheckIn,
+      actual_check_out: bookingsTable.actualCheckOut,
+      status: bookingsTable.status,
+      stay_type: bookingsTable.stayType,
+      occupied_persons: bookingsTable.occupiedPersons,
+      notes: bookingsTable.notes,
+      created_at: bookingsTable.createdAt,
+    })
+    .from(bookingsTable)
+    .leftJoin(roomsTable, eq(roomsTable.id, bookingsTable.roomId))
+    .where(eq(bookingsTable.guestId, guestId))
+    .orderBy(desc(bookingsTable.createdAt));
+
+  res.json(rows.map(r => ({
+    id: r.id,
+    room_id: r.room_id,
+    room_number: r.room_number ?? "-",
+    check_in_date: r.check_in_date,
+    check_out_date: r.check_out_date,
+    actual_check_in: r.actual_check_in?.toISOString() ?? null,
+    actual_check_out: r.actual_check_out?.toISOString() ?? null,
+    status: r.status,
+    stay_type: r.stay_type,
+    occupied_persons: r.occupied_persons,
+    notes: r.notes ?? null,
+    created_at: r.created_at.toISOString(),
+  })));
 });
 
 router.patch("/guests/:id", async (req, res): Promise<void> => {

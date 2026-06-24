@@ -15,6 +15,7 @@ import {
   PanelLeftOpen,
   Menu,
   X,
+  ClipboardList,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -30,12 +31,13 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: "/",           label: "Dashboard",    icon: LayoutDashboard, roles: ["viewer", "operator", "admin"] },
-  { href: "/floor-plan", label: "Denah Lantai", icon: Map,             roles: ["viewer", "operator", "admin"] },
-  { href: "/bookings",   label: "Pemesanan",    icon: CalendarDays,    roles: ["operator", "admin"] },
-  { href: "/guests",     label: "Tamu",         icon: Users,           roles: ["operator", "admin"] },
-  { href: "/reports",    label: "Laporan",      icon: BarChart3,       roles: ["viewer", "admin"] },
-  { href: "/settings",   label: "Pengaturan",   icon: Settings,        roles: ["admin"] },
+  { href: "/",             label: "Dashboard",    icon: LayoutDashboard, roles: ["viewer", "operator", "admin"] },
+  { href: "/floor-plan",   label: "Denah Lantai", icon: Map,             roles: ["viewer", "operator", "admin"] },
+  { href: "/bookings",     label: "Pemesanan",    icon: CalendarDays,    roles: ["operator", "admin"] },
+  { href: "/guests",       label: "Tamu",         icon: Users,           roles: ["operator", "admin"] },
+  { href: "/reports",      label: "Laporan",      icon: BarChart3,       roles: ["viewer", "admin"] },
+  { href: "/activity-log", label: "Log Aktivitas",icon: ClipboardList,   roles: ["admin"] },
+  { href: "/settings",     label: "Pengaturan",   icon: Settings,        roles: ["admin"] },
 ];
 
 const roleBadgeColor: Record<UserRole, string> = {

@@ -33,6 +33,10 @@ export default function Reports() {
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -40,9 +44,9 @@ export default function Reports() {
           <BarChart3 className="w-8 h-8" />
           Laporan & Statistik
         </h1>
-        <Button onClick={() => window.print()} variant="outline" className="print:hidden">
+        <Button onClick={handlePrint} variant="outline" className="print:hidden">
           <Printer className="w-4 h-4 mr-2" />
-          Cetak Laporan
+          Cetak / Ekspor PDF
         </Button>
       </div>
 
