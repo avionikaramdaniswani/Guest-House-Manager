@@ -17,7 +17,7 @@ INSERT INTO rooms (number, block, type, stars, room_name, status, is_facility) V
   ('27', 'A', 'family', 2, 'Kamar Keluarga (★★)',   'available', false),
   ('30', 'A', 'family', 2, 'Kamar Keluarga (★★)',   'available', false),
   ('31', 'A', 'family', 2, 'Kamar Keluarga (★★)',   'available', false),
-  ('33', 'A', 'single', 1, 'Kamar Standard (★)',    'available', false)
+  ('33', 'A', 'single', 1, 'Storage',               'facility',  true)
 ON CONFLICT (number) DO NOTHING;
 
 -- ── BLOCK C ──────────────────────────────────────────────────────

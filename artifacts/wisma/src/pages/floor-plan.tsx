@@ -554,7 +554,7 @@ export default function FloorPlan() {
             {R("23", 5,  1, 2)}
             {R("27", 7,  1, 2)}
             {R("31", 9,  1, 2)}
-            {R("33", 11, 1)}
+            {F("Storage", 11, 1)}
 
             <CorridorH c1={4} c2={11} row={2} lbl="Coridor BLOK A" />
 
