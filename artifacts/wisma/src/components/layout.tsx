@@ -5,7 +5,6 @@ import {
   LayoutDashboard,
   Map,
   Users,
-  CalendarDays,
   BarChart3,
   Settings,
   LogOut,
@@ -33,7 +32,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/",             label: "Dashboard",    icon: LayoutDashboard, roles: ["viewer", "operator", "admin"] },
   { href: "/floor-plan",   label: "Denah Lantai", icon: Map,             roles: ["viewer", "operator", "admin"] },
-  { href: "/bookings",     label: "Pemesanan",    icon: CalendarDays,    roles: ["operator", "admin"] },
   { href: "/guests",       label: "Tamu",         icon: Users,           roles: ["operator", "admin"] },
   { href: "/reports",      label: "Laporan",      icon: BarChart3,       roles: ["viewer", "admin"] },
   { href: "/activity-log", label: "Log Aktivitas",icon: ClipboardList,   roles: ["admin"] },

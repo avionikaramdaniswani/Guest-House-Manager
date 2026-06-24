@@ -119,4 +119,25 @@ router.patch("/guests/:id", async (req, res): Promise<void> => {
   res.json(UpdateGuestResponse.parse(toGuestShape(guest)));
 });
 
+router.delete("/guests/:id", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const guestId = parseInt(raw, 10);
+  if (isNaN(guestId)) { res.status(400).json({ error: "Invalid guest ID" }); return; }
+
+  const activeBookings = await db
+    .select({ id: bookingsTable.id })
+    .from(bookingsTable)
+    .where(eq(bookingsTable.guestId, guestId))
+    .limit(1);
+
+  if (activeBookings.length > 0) {
+    res.status(400).json({ error: "Tamu tidak bisa dihapus karena masih memiliki riwayat booking." });
+    return;
+  }
+
+  const [deleted] = await db.delete(guestsTable).where(eq(guestsTable.id, guestId)).returning();
+  if (!deleted) { res.status(404).json({ error: "Tamu tidak ditemukan" }); return; }
+  res.json({ ok: true });
+});
+
 export default router;

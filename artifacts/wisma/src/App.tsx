@@ -10,7 +10,6 @@ import { Layout } from "@/components/layout";
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import FloorPlan from "@/pages/floor-plan";
-import Bookings from "@/pages/bookings";
 import Guests from "@/pages/guests";
 import Reports from "@/pages/reports";
 import ActivityLog from "@/pages/activity-log";
@@ -22,7 +21,6 @@ const queryClient = new QueryClient();
 const routeRoles: Record<string, UserRole[]> = {
   "/":             ["viewer", "operator", "admin"],
   "/floor-plan":   ["viewer", "operator", "admin"],
-  "/bookings":     ["operator", "admin"],
   "/guests":       ["operator", "admin"],
   "/reports":      ["viewer", "admin"],
   "/activity-log": ["admin"],
@@ -68,7 +66,6 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/"           component={() => <ProtectedRoute path="/"           component={Dashboard} />} />
       <Route path="/floor-plan" component={() => <ProtectedRoute path="/floor-plan" component={FloorPlan} />} />
-      <Route path="/bookings"   component={() => <ProtectedRoute path="/bookings"   component={Bookings} />} />
       <Route path="/guests"     component={() => <ProtectedRoute path="/guests"     component={Guests} />} />
       <Route path="/reports"      component={() => <ProtectedRoute path="/reports"      component={Reports} />} />
       <Route path="/activity-log" component={() => <ProtectedRoute path="/activity-log" component={ActivityLog} />} />
