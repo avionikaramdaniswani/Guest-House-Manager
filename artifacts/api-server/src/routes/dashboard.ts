@@ -106,7 +106,7 @@ router.get("/dashboard/alerts", async (_req, res): Promise<void> => {
     );
 
   const longStayExpiring = expiringBookings.filter(b =>
-    b.stayType === "long_stay_japan" || b.stayType === "long_stay_local"
+    b.stayType === "long_stay_japan" || b.stayType === "long_stay_local" || b.stayType === "long_stay"
   );
 
   for (const b of longStayExpiring) {

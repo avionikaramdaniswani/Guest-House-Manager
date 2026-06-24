@@ -22,6 +22,17 @@ interface Props {
   onSuccess?: () => void;
 }
 
+const JAPAN_LONGSTAY_ROOMS = new Set(["23","24","27","30","31","54","55","60"]);
+const LOCAL_LONGSTAY_ROOMS  = new Set(["61","62"]);
+
+type StayType = "regular" | "long_stay_japan" | "long_stay_local";
+
+function defaultStayType(roomNumber: string): StayType {
+  if (JAPAN_LONGSTAY_ROOMS.has(roomNumber)) return "long_stay_japan";
+  if (LOCAL_LONGSTAY_ROOMS.has(roomNumber))  return "long_stay_local";
+  return "regular";
+}
+
 function todayStr() {
   return new Date().toISOString().split("T")[0];
 }
@@ -31,7 +42,6 @@ function diffDays(from: string, to: string) {
   const b = new Date(to).getTime();
   return Math.max(0, Math.ceil((b - a) / (1000 * 60 * 60 * 24)));
 }
-
 
 function maxPersonsForStars(stars: number) {
   if (stars >= 3) return 4;
@@ -47,6 +57,7 @@ export default function CheckinDialog({ room, open, onOpenChange, onSuccess }: P
 
   const [guestName, setGuestName]             = useState("");
   const [company, setCompany]                 = useState("");
+  const [stayType, setStayType]               = useState<StayType>(() => defaultStayType(room.number));
   const [checkIn, setCheckIn]                 = useState(today);
   const [checkOut, setCheckOut]               = useState(() => {
     const d = new Date(); d.setDate(d.getDate() + 1);
@@ -63,6 +74,7 @@ export default function CheckinDialog({ room, open, onOpenChange, onSuccess }: P
     if (open) {
       setGuestName("");
       setCompany("");
+      setStayType(defaultStayType(room.number));
       setCheckIn(today);
       const d = new Date(); d.setDate(d.getDate() + 1);
       setCheckOut(d.toISOString().split("T")[0]);
@@ -94,7 +106,7 @@ export default function CheckinDialog({ room, open, onOpenChange, onSuccess }: P
           company: company.trim() || null,
           check_in_date: checkIn,
           check_out_date: checkOut,
-          stay_type: "regular",
+          stay_type: stayType,
           occupied_persons: occupiedPersons,
           notes: notes.trim() || null,
         }),
@@ -165,6 +177,21 @@ export default function CheckinDialog({ room, open, onOpenChange, onSuccess }: P
               <Label>Nama Kamar</Label>
               <Input value={room.room_name ?? "—"} readOnly className="bg-muted/50 cursor-default" />
             </div>
+          </div>
+
+          {/* Tipe Menginap */}
+          <div className="space-y-1.5">
+            <Label>Tipe Menginap</Label>
+            <Select value={stayType} onValueChange={v => setStayType(v as StayType)} disabled={loading}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="regular">Reguler</SelectItem>
+                <SelectItem value="long_stay_japan">Long Stay Jepang</SelectItem>
+                <SelectItem value="long_stay_local">Long Stay Lokal</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Tanggal CI & CO */}

@@ -25,7 +25,7 @@ const DirectCheckInBody = z.object({
   company:          z.string().nullish(),
   check_in_date:    z.string(),
   check_out_date:   z.string(),
-  stay_type:        z.enum(["regular", "long_stay"]),
+  stay_type:        z.enum(["regular", "long_stay_japan", "long_stay_local"]),
   occupied_persons: z.number().int().default(1),
   notes:            z.string().nullish(),
 });

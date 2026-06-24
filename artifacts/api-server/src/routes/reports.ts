@@ -56,6 +56,7 @@ router.get("/reports/daily", async (req, res): Promise<void> => {
     check_ins: checkInsRows.length,
     check_outs: checkOutsRows.length,
     new_reservations: reservationsRows.length,
+    revenue: 0,
     bookings: allBookings,
   }));
 });
@@ -84,6 +85,7 @@ router.get("/reports/monthly", async (req, res): Promise<void> => {
   for (const b of checkouts) {
     const label = b.stayType === "long_stay_japan" ? "Long Stay Jepang"
                 : b.stayType === "long_stay_local" ? "Long Stay Lokal"
+                : (b.stayType as string) === "long_stay" ? "Long Stay"
                 : "Reguler";
     stayTypeMap.set(label, (stayTypeMap.get(label) ?? 0) + 1);
   }
@@ -103,9 +105,11 @@ router.get("/reports/monthly", async (req, res): Promise<void> => {
   res.json(GetMonthlyReportResponse.parse({
     year: y,
     month: m,
+    total_revenue: 0,
     avg_occupancy_rate: Math.min(100, Math.round(avgOccupancyRate * 10) / 10),
     total_guests: totalGuests,
     nationality_breakdown: nationalityBreakdown,
+    room_type_revenue: [],
   }));
 });
 
