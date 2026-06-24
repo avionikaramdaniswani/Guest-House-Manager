@@ -106,6 +106,8 @@ export function Layout({ children }: LayoutProps) {
 
   const isDark = theme === "dark";
 
+  const pageLabel = navItems.find(n => n.href === location)?.label ?? "Wisma Eucaliptus";
+
   return (
     <div className="min-h-screen bg-background flex w-full">
 
@@ -117,9 +119,17 @@ export function Layout({ children }: LayoutProps) {
         >
           <Menu className="w-5 h-5" />
         </button>
-        <span className="font-bold text-sidebar-foreground text-sm tracking-tight">
+        <span className="flex-1 font-bold text-sidebar-foreground text-sm tracking-tight">
           Wisma Eucaliptus
         </span>
+        {/* Dark mode toggle in mobile top bar */}
+        <button
+          onClick={() => setTheme(isDark ? "light" : "dark")}
+          title={isDark ? "Mode Terang" : "Mode Gelap"}
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-colors"
+        >
+          {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        </button>
       </header>
 
       {/* ── Mobile overlay backdrop ── */}
@@ -167,21 +177,14 @@ export function Layout({ children }: LayoutProps) {
             </span>
           </div>
         )}
-        {/* Mobile footer */}
-        <div className="px-3 pb-4 pt-2 border-t border-sidebar-border shrink-0 space-y-0.5">
-          <button
-            onClick={() => setTheme(isDark ? "light" : "dark")}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-colors"
-          >
-            {isDark ? <Sun className="w-[18px] h-[18px] shrink-0" /> : <Moon className="w-[18px] h-[18px] shrink-0" />}
-            <span>{isDark ? "Mode Terang" : "Mode Gelap"}</span>
-          </button>
+        {/* Mobile footer — logout icon only */}
+        <div className="px-3 pb-4 pt-2 border-t border-sidebar-border shrink-0 flex justify-center">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-colors"
+            title="Keluar"
+            className="w-10 h-10 flex items-center justify-center rounded-lg text-sidebar-foreground/70 hover:bg-red-500/10 hover:text-red-500 transition-colors"
           >
-            <LogOut className="w-[18px] h-[18px] shrink-0" />
-            <span>Keluar</span>
+            <LogOut className="w-[18px] h-[18px]" />
           </button>
         </div>
       </aside>
@@ -214,7 +217,7 @@ export function Layout({ children }: LayoutProps) {
 
         <NavLinks location={location} collapsed={collapsed} visibleItems={visibleItems} />
 
-        {/* Desktop user info */}
+        {/* Desktop user info (hidden when collapsed) */}
         {user && !collapsed && (
           <div className="px-4 py-3 border-t border-sidebar-border shrink-0">
             <div className="flex items-center gap-2 mb-1.5">
@@ -232,29 +235,40 @@ export function Layout({ children }: LayoutProps) {
           </div>
         )}
 
-        {/* Desktop footer */}
-        <div className={`px-3 pb-4 pt-2 border-t border-sidebar-border shrink-0 space-y-0.5`}>
-          <button
-            onClick={() => setTheme(isDark ? "light" : "dark")}
-            title={collapsed ? (isDark ? "Mode Terang" : "Mode Gelap") : undefined}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-colors ${collapsed ? "justify-center px-0" : ""}`}
-          >
-            {isDark ? <Sun className="w-[18px] h-[18px] shrink-0" /> : <Moon className="w-[18px] h-[18px] shrink-0" />}
-            {!collapsed && <span>{isDark ? "Mode Terang" : "Mode Gelap"}</span>}
-          </button>
+        {/* Desktop footer — logout icon only, always centered */}
+        <div className="px-3 pb-4 pt-2 border-t border-sidebar-border shrink-0 flex justify-center">
           <button
             onClick={handleLogout}
-            title={collapsed ? "Keluar" : undefined}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-colors ${collapsed ? "justify-center px-0" : ""}`}
+            title="Keluar"
+            className="w-10 h-10 flex items-center justify-center rounded-lg text-sidebar-foreground/70 hover:bg-red-500/10 hover:text-red-500 transition-colors"
           >
-            <LogOut className="w-[18px] h-[18px] shrink-0" />
-            {!collapsed && <span>Keluar</span>}
+            <LogOut className="w-[18px] h-[18px]" />
           </button>
         </div>
       </aside>
 
       {/* ── Main content ── */}
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">
+
+        {/* Desktop top navbar */}
+        <header className="hidden md:flex items-center justify-between h-14 px-6 border-b border-border bg-background shrink-0">
+          <h1 className="text-sm font-semibold text-foreground">{pageLabel}</h1>
+          <div className="flex items-center gap-2">
+            {user && (
+              <span className="text-xs text-muted-foreground mr-1">
+                {user.name}
+              </span>
+            )}
+            <button
+              onClick={() => setTheme(isDark ? "light" : "dark")}
+              title={isDark ? "Mode Terang" : "Mode Gelap"}
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            >
+              {isDark ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
+            </button>
+          </div>
+        </header>
+
         <div className="flex-1 overflow-auto p-4 pt-[72px] md:pt-6 md:px-8 md:pb-8">
           {children}
         </div>
