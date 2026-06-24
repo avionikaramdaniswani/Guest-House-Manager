@@ -380,7 +380,6 @@ function RoomDetailContent({
                 <div style={{ fontSize:20, fontWeight:800, color:"#111827", marginBottom:8, lineHeight:1.2 }}>
                   {booking.guest_name}
                 </div>
-                <InfoRow label="Asal" value={booking.guest_nationality ?? "—"} />
                 {booking.guest_company && <InfoRow label="Perusahaan" value={booking.guest_company} />}
                 <InfoRow
                   label="Tipe stay"
