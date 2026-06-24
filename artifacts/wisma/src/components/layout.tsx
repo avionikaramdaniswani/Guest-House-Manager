@@ -151,17 +151,17 @@ export function Layout({ children }: LayoutProps) {
         }`}
       >
         {/* Desktop header row */}
-        <div className={`flex items-center h-14 shrink-0 border-b border-sidebar-border ${collapsed ? "justify-center px-0" : "px-4 gap-2"}`}>
+        <div className="relative flex items-center justify-center h-14 shrink-0 border-b border-sidebar-border">
           {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-sidebar-foreground leading-tight truncate">Wisma Eucaliptus</p>
-              <p className="text-[11px] text-sidebar-foreground/50 truncate">Guest House Deluxe</p>
+            <div className="text-center px-10">
+              <p className="text-sm font-bold text-sidebar-foreground leading-tight">Wisma Eucaliptus</p>
+              <p className="text-[11px] text-sidebar-foreground/50">Guest House Deluxe</p>
             </div>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
             title={collapsed ? "Buka sidebar" : "Tutup sidebar"}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-sidebar-foreground/50 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-colors shrink-0"
+            className="absolute right-2 w-8 h-8 flex items-center justify-center rounded-lg text-sidebar-foreground/50 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-colors"
           >
             {collapsed
               ? <PanelLeftOpen className="w-4 h-4" />

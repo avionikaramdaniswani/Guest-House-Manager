@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect, memo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGetRooms, useGetRoom, getGetRoomsQueryKey } from "@workspace/api-client-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Drawer, DrawerContent } from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import type { Room } from "@workspace/api-client-react";
 import CheckinDialog from "@/components/checkin-dialog";
@@ -485,6 +487,7 @@ export default function FloorPlan() {
   const { data: rooms, isLoading, refetch } = useGetRooms();
   const [selected, setSelected]   = useState<Room | null>(null);
   const [checkinOpen, setCheckinOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => { refetch(); }, []);
 
@@ -636,19 +639,36 @@ export default function FloorPlan() {
         />
       )}
 
-      {/* ── Room Detail Sheet ── */}
-      <Sheet open={selected !== null} onOpenChange={open => !open && setSelected(null)}>
-        <SheetContent className="sm:max-w-sm p-0 border-l shadow-2xl flex flex-col [&>button]:top-4 [&>button]:right-4">
-          {selected && (
-            <RoomDetailContent
-              room={selected}
-              onClose={() => setSelected(null)}
-              onCheckin={() => setCheckinOpen(true)}
-              onRefresh={() => refetch()}
-            />
-          )}
-        </SheetContent>
-      </Sheet>
+      {/* ── Room Detail: side panel on desktop, bottom sheet on mobile ── */}
+      {isMobile ? (
+        <Drawer open={selected !== null} onOpenChange={open => !open && setSelected(null)}>
+          <DrawerContent className="max-h-[88vh] flex flex-col p-0">
+            {selected && (
+              <div className="flex flex-col overflow-hidden flex-1 min-h-0">
+                <RoomDetailContent
+                  room={selected}
+                  onClose={() => setSelected(null)}
+                  onCheckin={() => setCheckinOpen(true)}
+                  onRefresh={() => refetch()}
+                />
+              </div>
+            )}
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Sheet open={selected !== null} onOpenChange={open => !open && setSelected(null)}>
+          <SheetContent className="sm:max-w-sm p-0 border-l shadow-2xl flex flex-col [&>button]:top-4 [&>button]:right-4">
+            {selected && (
+              <RoomDetailContent
+                room={selected}
+                onClose={() => setSelected(null)}
+                onCheckin={() => setCheckinOpen(true)}
+                onRefresh={() => refetch()}
+              />
+            )}
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }
