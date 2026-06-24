@@ -188,6 +188,49 @@ function TR({ lbl, desc }: { lbl: string; desc: string }) {
   );
 }
 
+// ─── Panel helpers ────────────────────────────────────────────────
+const S = { /* shared inline style tokens */
+  labelSm: { fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#9ca3af" },
+  sectionTitle: { fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.1em", color:"#9ca3af", padding:"14px 18px 6px" },
+  divider: { height:1, background:"#f3f4f6", margin:"0 18px" },
+};
+
+function PanelSection({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div style={S.sectionTitle}>{label}</div>
+      <div style={{ padding:"4px 18px 14px" }}>{children}</div>
+    </div>
+  );
+}
+
+function PanelDivider() {
+  return <div style={S.divider} />;
+}
+
+function InfoRow({ label, value, muted }: { label: string; value: React.ReactNode; muted?: boolean }) {
+  return (
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", padding:"4px 0", gap:12 }}>
+      <span style={{ fontSize:12, color:"#9ca3af", flexShrink:0 }}>{label}</span>
+      <span style={{ fontSize:13, fontWeight:600, color: muted ? "#9ca3af" : "#111827", textAlign:"right" }}>{value}</span>
+    </div>
+  );
+}
+
+function PanelAlert({ type, children }: { type: "error" | "warn" | "info"; children: React.ReactNode }) {
+  const styles = {
+    error: { bg:"#fef2f2", border:"#fecaca", color:"#991b1b" },
+    warn:  { bg:"#fffbeb", border:"#fde68a", color:"#92400e" },
+    info:  { bg:"#eff6ff", border:"#bfdbfe", color:"#1e40af" },
+  }[type];
+  return (
+    <div style={{ background:styles.bg, border:`1px solid ${styles.border}`, borderRadius:6, padding:"7px 12px", marginTop:10, fontSize:12, color:styles.color, display:"flex", alignItems:"flex-start", gap:6 }}>
+      <AlertTriangle style={{ width:13, height:13, flexShrink:0, marginTop:1 }} />
+      <span>{children}</span>
+    </div>
+  );
+}
+
 // ─── Room Detail Panel ───────────────────────────────────────────
 function RoomDetailContent({
   room, onClose, onCheckin, onRefresh,
@@ -207,9 +250,21 @@ function RoomDetailContent({
 
   const isOccupied = ["occupied_regular","long_stay_japan","long_stay_local"].includes(room.status);
 
-  const totalDays  = booking ? diffDays(String(booking.check_in_date), String(booking.check_out_date)) : 0;
-  const today      = new Date().toISOString().split("T")[0];
-  const daysLeft   = booking ? diffDays(today, String(booking.check_out_date)) : 0;
+  const today        = new Date().toISOString().split("T")[0];
+  const totalNights  = booking ? diffDays(String(booking.check_in_date), String(booking.check_out_date)) : 0;
+  const nightsStayed = booking ? Math.min(totalNights, Math.max(1, diffDays(String(booking.check_in_date), today))) : 0;
+  const daysLeft     = booking ? diffDays(today, String(booking.check_out_date)) : 0;
+
+  // Designation for available room
+  const designation =
+    JAPAN_LONGSTAY_ROOMS.has(room.number) ? { label:"Long Stay — Jepang", color:"#f97316" } :
+    LOCAL_LONGSTAY_ROOMS.has(room.number) ? { label:"Long Stay — Lokal",  color:"#3b82f6" } :
+    LOCAL_SINGLE_ROOMS.has(room.number)   ? { label:"Kamar Lokal (★)",    color:"#60a5fa" } :
+    null;
+
+  const headerBg = roomBg(room.status, room.number);
+  const headerFg = roomFg(room.status, room.number);
+  const isWhiteBg = headerBg === "#ffffff";
 
   async function handleCheckout() {
     if (!booking) return;
@@ -241,234 +296,215 @@ function RoomDetailContent({
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div style={{ height:"100%", display:"flex", flexDirection:"column", overflow:"hidden", background:"#fff" }}>
 
-      {/* ── Colored Header ── */}
-      <div
-        className="px-5 pt-5 pb-4 shrink-0"
-        style={{ background: sbg(room.status), color: sfg(room.status) }}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-[10px] font-bold uppercase tracking-[0.15em] opacity-60 mb-0.5">
-              {typeLabel(room.type)}
+      {/* ── Header ── */}
+      <div style={{ background:headerBg, color:headerFg, padding:"16px 18px 14px", flexShrink:0, borderBottom: isWhiteBg ? "1px solid #f3f4f6" : "none" }}>
+        <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.12em", opacity:0.65, marginBottom:6 }}>
+          Blok {room.block} · {"★".repeat(room.stars)} · {typeLabel(room.type)}
+        </div>
+        <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", gap:8 }}>
+          <div>
+            <div style={{ fontSize:32, fontWeight:900, lineHeight:1, letterSpacing:"-0.02em" }}>
+              Kamar {room.number}
             </div>
-            <div className="text-3xl font-black leading-tight">Kamar {room.number}</div>
-            <div className="flex items-center gap-1.5 mt-1 text-xs font-medium opacity-70 flex-wrap">
-              <span>Blok {room.block}</span>
-              <span>·</span>
-              <span>{"★".repeat(room.stars)}</span>
-              {room.room_name && (
-                <>
-                  <span>·</span>
-                  <span className="truncate">{room.room_name}</span>
-                </>
-              )}
-            </div>
+            {designation && room.status === "available" && (
+              <div style={{ fontSize:11, fontWeight:600, marginTop:5, opacity:0.8 }}>{designation.label}</div>
+            )}
           </div>
-          <div
-            className="shrink-0 mt-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide"
-            style={{ background:"rgba(0,0,0,0.12)", color: sfg(room.status) }}
-          >
+          <div style={{
+            fontSize:9, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.1em",
+            background: isWhiteBg ? "#f3f4f6" : "rgba(0,0,0,0.18)",
+            color: isWhiteBg ? "#374151" : headerFg,
+            padding:"4px 10px", borderRadius:20, marginBottom:2, whiteSpace:"nowrap",
+          }}>
             {statusLabel(room.status)}
           </div>
         </div>
       </div>
 
       {/* ── Body ── */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div style={{ flex:1, overflowY:"auto" }}>
 
-        {/* Available */}
+        {/* ── AVAILABLE ── */}
         {room.status === "available" && (
-          <div className="rounded-xl bg-green-50 border border-green-200 p-5 text-center">
-            <CheckCircle2 className="w-9 h-9 text-green-500 mx-auto mb-2" />
-            <p className="font-bold text-green-800">Kamar Tersedia</p>
-            <p className="text-xs text-green-600 mt-1">Siap untuk check-in tamu baru</p>
-          </div>
-        )}
-
-        {/* Blocked */}
-        {room.status === "blocked" && (
-          <div className="rounded-xl bg-red-50 border border-red-200 p-4">
-            <div className="flex items-center gap-2 text-red-700 font-bold mb-1">
-              <Lock className="w-4 h-4" />
-              Kamar Diblokir
-            </div>
-            <p className="text-xs text-red-600">Kamar tidak dapat digunakan sementara.</p>
-          </div>
-        )}
-
-        {/* Occupied: Guest info */}
-        {isOccupied && (
-          loadingDetail ? (
-            <div className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
-              <Loader2 className="w-6 h-6 animate-spin" />
-              <span className="text-sm">Memuat info tamu…</span>
-            </div>
-          ) : booking ? (
-            <div className="space-y-3">
-
-              {/* Guest identity card */}
-              <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-                <div className="px-4 py-3 bg-muted/40 border-b flex items-center gap-2">
-                  <User className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Info Tamu</span>
-                </div>
-                <div className="p-4 space-y-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Nama</p>
-                    <p className="font-bold text-base mt-0.5">{booking.guest_name}</p>
-                  </div>
-                  {booking.guest_company && (
-                    <div>
-                      <p className="text-xs text-muted-foreground">Perusahaan</p>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                        <p className="font-medium text-sm">{booking.guest_company}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
+          <>
+            <PanelSection label="Status Kamar">
+              <div style={{ fontSize:13, color:"#6b7280", paddingTop:4 }}>
+                Kamar kosong — siap untuk check-in tamu baru.
               </div>
-
-              {/* Dates + counters card */}
-              <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-                <div className="px-4 py-3 bg-muted/40 border-b flex items-center gap-2">
-                  <CalendarDays className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Periode Menginap</span>
-                </div>
-                <div className="p-4 space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-                        <CalendarDays className="w-3 h-3" /> Check-in
-                      </div>
-                      <p className="font-semibold text-sm">{formatDate(String(booking.check_in_date))}</p>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-                        <CalendarOff className="w-3 h-3" /> Check-out
-                      </div>
-                      <p className="font-semibold text-sm">{formatDate(String(booking.check_out_date))}</p>
-                    </div>
-                  </div>
-
-                  {/* Stats */}
-                  <div className="grid grid-cols-3 gap-2 pt-2 border-t">
-                    <div className="text-center">
-                      <p className="text-2xl font-black text-primary leading-none">{totalDays}</p>
-                      <p className="text-[10px] text-muted-foreground mt-1">Total Hari</p>
-                    </div>
-                    <div className="text-center border-x">
-                      <p className={`text-2xl font-black leading-none ${
-                        daysLeft < 0 ? "text-destructive" : daysLeft <= 3 ? "text-orange-500" : "text-green-600"
-                      }`}>
-                        {Math.abs(daysLeft)}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground mt-1">
-                        {daysLeft < 0 ? "Hari Lewat" : "Sisa Hari"}
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-0.5">
-                        <p className="text-2xl font-black leading-none">{booking.occupied_persons}</p>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground mt-1">Penghuni</p>
-                    </div>
-                  </div>
-
-                  {/* Overdue warning */}
-                  {daysLeft < 0 && (
-                    <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg p-2.5 text-xs text-red-700">
-                      <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                      Tanggal keluar sudah terlewat {Math.abs(daysLeft)} hari
-                    </div>
-                  )}
-
-                  {/* Expiring soon */}
-                  {daysLeft >= 0 && daysLeft <= 3 && (
-                    <div className="flex items-start gap-2 bg-orange-50 border border-orange-200 rounded-lg p-2.5 text-xs text-orange-700">
-                      <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                      Akan check-out dalam {daysLeft} hari
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Notes */}
-              {booking.notes && (
-                <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-                  <div className="px-4 py-3 bg-muted/40 border-b flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Catatan</span>
-                  </div>
-                  <p className="p-4 text-sm leading-relaxed">{booking.notes}</p>
+              {room.notes && (
+                <div style={{ marginTop:10, background:"#f9fafb", borderRadius:6, padding:"8px 12px", fontSize:13, color:"#374151" }}>
+                  {room.notes}
                 </div>
               )}
+            </PanelSection>
+            {designation && (
+              <>
+                <PanelDivider />
+                <PanelSection label="Peruntukan">
+                  <div style={{ display:"flex", alignItems:"center", gap:8, paddingTop:4 }}>
+                    <div style={{ width:12, height:12, borderRadius:2, background:designation.color, flexShrink:0 }} />
+                    <span style={{ fontSize:13, fontWeight:600, color:"#111827" }}>{designation.label}</span>
+                  </div>
+                </PanelSection>
+              </>
+            )}
+          </>
+        )}
+
+        {/* ── BLOCKED ── */}
+        {room.status === "blocked" && (
+          <PanelSection label="Status Kamar">
+            <div style={{ fontSize:13, color:"#6b7280", paddingTop:4 }}>
+              Kamar tidak dapat digunakan sementara.
             </div>
+            {room.notes && (
+              <div style={{ marginTop:10, background:"#f9fafb", borderRadius:6, padding:"8px 12px", fontSize:13, color:"#374151" }}>
+                {room.notes}
+              </div>
+            )}
+          </PanelSection>
+        )}
+
+        {/* ── OCCUPIED ── */}
+        {isOccupied && (
+          loadingDetail ? (
+            <div style={{ display:"flex", justifyContent:"center", alignItems:"center", padding:"48px 0", color:"#9ca3af" }}>
+              <Loader2 className="w-5 h-5 animate-spin" />
+            </div>
+          ) : booking ? (
+            <>
+              {/* ── Tamu ── */}
+              <PanelSection label="Tamu">
+                <div style={{ fontSize:20, fontWeight:800, color:"#111827", marginBottom:8, lineHeight:1.2 }}>
+                  {booking.guest_name}
+                </div>
+                <InfoRow label="Asal" value={booking.guest_nationality ?? "—"} />
+                {booking.guest_company && <InfoRow label="Perusahaan" value={booking.guest_company} />}
+                <InfoRow
+                  label="Tipe stay"
+                  value={booking.stay_type === "long_stay" ? "Long Stay" : "Reguler"}
+                />
+                <InfoRow label="Jumlah tamu" value={`${booking.occupied_persons} orang`} />
+              </PanelSection>
+
+              <PanelDivider />
+
+              {/* ── Menginap ── */}
+              <PanelSection label="Menginap">
+                {/* Dates row */}
+                <div style={{ display:"grid", gridTemplateColumns:"1fr auto 1fr", alignItems:"center", gap:8, marginBottom:14 }}>
+                  <div>
+                    <div style={S.labelSm}>Check-in</div>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#111827", marginTop:3 }}>
+                      {formatDate(String(booking.check_in_date))}
+                    </div>
+                  </div>
+                  <div style={{ fontSize:14, color:"#d1d5db", fontWeight:300 }}>→</div>
+                  <div style={{ textAlign:"right" }}>
+                    <div style={{ ...S.labelSm, textAlign:"right" }}>Check-out</div>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#111827", marginTop:3 }}>
+                      {formatDate(String(booking.check_out_date))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Night counter */}
+                <div style={{
+                  display:"grid", gridTemplateColumns:"repeat(3,1fr)",
+                  background:"#f9fafb", border:"1px solid #f3f4f6", borderRadius:8,
+                  textAlign:"center", overflow:"hidden",
+                }}>
+                  <div style={{ padding:"12px 0" }}>
+                    <div style={{ fontSize:26, fontWeight:900, color:"#374151", lineHeight:1 }}>{nightsStayed}</div>
+                    <div style={{ fontSize:10, color:"#9ca3af", marginTop:5 }}>Malam ke</div>
+                  </div>
+                  <div style={{ padding:"12px 0", borderLeft:"1px solid #e5e7eb", borderRight:"1px solid #e5e7eb" }}>
+                    <div style={{
+                      fontSize:26, fontWeight:900, lineHeight:1,
+                      color: daysLeft < 0 ? "#ef4444" : daysLeft === 0 ? "#f97316" : daysLeft <= 3 ? "#eab308" : "#22c55e",
+                    }}>
+                      {Math.abs(daysLeft)}
+                    </div>
+                    <div style={{ fontSize:10, color:"#9ca3af", marginTop:5 }}>
+                      {daysLeft < 0 ? "Hari lewat" : "Sisa hari"}
+                    </div>
+                  </div>
+                  <div style={{ padding:"12px 0" }}>
+                    <div style={{ fontSize:26, fontWeight:900, color:"#374151", lineHeight:1 }}>{totalNights}</div>
+                    <div style={{ fontSize:10, color:"#9ca3af", marginTop:5 }}>Total malam</div>
+                  </div>
+                </div>
+
+                {/* Alerts */}
+                {daysLeft < 0 && (
+                  <PanelAlert type="error">
+                    Lewat {Math.abs(daysLeft)} hari dari jadwal check-out
+                  </PanelAlert>
+                )}
+                {daysLeft === 0 && (
+                  <PanelAlert type="warn">Check-out hari ini</PanelAlert>
+                )}
+                {daysLeft > 0 && daysLeft <= 3 && (
+                  <PanelAlert type="warn">Akan check-out dalam {daysLeft} hari</PanelAlert>
+                )}
+              </PanelSection>
+
+              {/* ── Catatan ── */}
+              {booking.notes && (
+                <>
+                  <PanelDivider />
+                  <PanelSection label="Catatan">
+                    <div style={{ fontSize:13, color:"#374151", lineHeight:1.65 }}>{booking.notes}</div>
+                  </PanelSection>
+                </>
+              )}
+            </>
           ) : (
-            <div className="text-center text-sm text-muted-foreground py-6">
+            <div style={{ padding:"20px 18px", textAlign:"center", color:"#9ca3af", fontSize:13 }}>
               Data tamu tidak tersedia.
             </div>
           )
         )}
-
-        {/* Room notes (when not occupied) */}
-        {room.notes && !isOccupied && (
-          <div className="rounded-xl border bg-muted/30 p-3">
-            <p className="text-xs text-muted-foreground mb-1">Catatan Kamar</p>
-            <p className="text-sm">{room.notes}</p>
-          </div>
-        )}
       </div>
 
       {/* ── Action Buttons ── */}
-      <div className="p-4 border-t shrink-0 space-y-2 bg-background">
+      <div style={{ padding:"12px 16px 16px", borderTop:"1px solid #f3f4f6", flexShrink:0, background:"#fff" }}>
 
         {/* Check-in */}
         {room.status === "available" && (
-          <Button className="w-full h-11 text-sm font-semibold" onClick={onCheckin}>
+          <Button className="w-full h-10 text-sm font-semibold mb-2" onClick={onCheckin}>
             <UserCheck className="w-4 h-4 mr-2" />
             Check-in Tamu
           </Button>
         )}
 
-        {/* Check-out: normal button */}
+        {/* Check-out button */}
         {isOccupied && !checkoutConfirm && (
-          <Button
-            variant="secondary"
-            className="w-full h-11 text-sm font-semibold"
-            onClick={() => setCheckoutConfirm(true)}
-          >
+          <Button variant="secondary" className="w-full h-10 text-sm font-semibold mb-2" onClick={() => setCheckoutConfirm(true)}>
             <LogOut className="w-4 h-4 mr-2" />
-            Check-out Tamu
+            Check-out
           </Button>
         )}
 
-        {/* Check-out: confirmation */}
+        {/* Check-out confirmation */}
         {isOccupied && checkoutConfirm && (
-          <div className="space-y-2">
-            <div className="rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs text-orange-800 text-center">
+          <div style={{ marginBottom:8 }}>
+            <div style={{ fontSize:12, color:"#92400e", background:"#fffbeb", border:"1px solid #fde68a", borderRadius:6, padding:"6px 12px", textAlign:"center", marginBottom:8 }}>
               Konfirmasi check-out <strong>{booking?.guest_name}</strong>?
             </div>
             {checkoutError && (
-              <p className="text-xs text-destructive text-center">{checkoutError}</p>
+              <p style={{ fontSize:12, color:"#ef4444", textAlign:"center", marginBottom:6 }}>{checkoutError}</p>
             )}
             <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant="outline"
-                className="h-9 text-sm"
+              <Button variant="outline" className="h-9 text-sm"
                 onClick={() => { setCheckoutConfirm(false); setCheckoutError(null); }}
-                disabled={checkoutLoading}
-              >
+                disabled={checkoutLoading}>
                 Batal
               </Button>
-              <Button
-                variant="destructive"
-                className="h-9 text-sm"
-                onClick={handleCheckout}
-                disabled={checkoutLoading}
-              >
+              <Button variant="destructive" className="h-9 text-sm"
+                onClick={handleCheckout} disabled={checkoutLoading}>
                 {checkoutLoading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
                 Ya, Check-out
               </Button>
@@ -476,7 +512,7 @@ function RoomDetailContent({
           </div>
         )}
 
-        {/* Secondary actions */}
+        {/* Secondary */}
         <div className="grid grid-cols-2 gap-2">
           <Button variant="outline" size="sm" className="h-8 text-xs">
             <FileText className="w-3 h-3 mr-1.5" />
