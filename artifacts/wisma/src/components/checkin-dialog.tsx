@@ -32,24 +32,30 @@ function diffDays(from: string, to: string) {
   return Math.max(0, Math.ceil((b - a) / (1000 * 60 * 60 * 24)));
 }
 
-type StayType = "regular" | "long_stay_japan" | "long_stay_local";
+
+function maxPersonsForStars(stars: number) {
+  if (stars >= 3) return 4;
+  if (stars === 2) return 3;
+  return 2;
+}
 
 export default function CheckinDialog({ room, open, onOpenChange, onSuccess }: Props) {
   const qc = useQueryClient();
   const today = todayStr();
 
-  const [guestName, setGuestName]         = useState("");
-  const [company, setCompany]             = useState("");
-  const [checkIn, setCheckIn]             = useState(today);
-  const [checkOut, setCheckOut]           = useState(() => {
+  const maxPersons = maxPersonsForStars(room.stars);
+
+  const [guestName, setGuestName]             = useState("");
+  const [company, setCompany]                 = useState("");
+  const [checkIn, setCheckIn]                 = useState(today);
+  const [checkOut, setCheckOut]               = useState(() => {
     const d = new Date(); d.setDate(d.getDate() + 1);
     return d.toISOString().split("T")[0];
   });
-  const [stayType, setStayType]           = useState<StayType>("regular");
   const [occupiedPersons, setOccupiedPersons] = useState(1);
-  const [notes, setNotes]                 = useState("");
-  const [loading, setLoading]             = useState(false);
-  const [error, setError]                 = useState<string | null>(null);
+  const [notes, setNotes]                     = useState("");
+  const [loading, setLoading]                 = useState(false);
+  const [error, setError]                     = useState<string | null>(null);
 
   const totalDays = diffDays(checkIn, checkOut);
 
@@ -60,7 +66,6 @@ export default function CheckinDialog({ room, open, onOpenChange, onSuccess }: P
       setCheckIn(today);
       const d = new Date(); d.setDate(d.getDate() + 1);
       setCheckOut(d.toISOString().split("T")[0]);
-      setStayType("regular");
       setOccupiedPersons(1);
       setNotes("");
       setError(null);
@@ -89,7 +94,7 @@ export default function CheckinDialog({ room, open, onOpenChange, onSuccess }: P
           company: company.trim() || null,
           check_in_date: checkIn,
           check_out_date: checkOut,
-          stay_type: stayType,
+          stay_type: "regular",
           occupied_persons: occupiedPersons,
           notes: notes.trim() || null,
         }),
@@ -197,33 +202,30 @@ export default function CheckinDialog({ room, open, onOpenChange, onSuccess }: P
             />
           </div>
 
-          {/* Tipe Menginap */}
+          {/* Jumlah Penghuni */}
           <div className="space-y-1.5">
-            <Label>Tipe Menginap</Label>
-            <Select value={stayType} onValueChange={v => setStayType(v as StayType)} disabled={loading}>
+            <Label>
+              Jumlah Penghuni
+              <span className="ml-2 text-xs text-muted-foreground font-normal">
+                {"★".repeat(room.stars)} max {maxPersons} orang
+              </span>
+            </Label>
+            <Select
+              value={String(occupiedPersons)}
+              onValueChange={v => setOccupiedPersons(parseInt(v))}
+              disabled={loading}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="regular">Reguler</SelectItem>
-                <SelectItem value="long_stay_japan">Long Stay — Jepang</SelectItem>
-                <SelectItem value="long_stay_local">Long Stay — Lokal</SelectItem>
+                {Array.from({ length: maxPersons }, (_, i) => i + 1).map(n => (
+                  <SelectItem key={n} value={String(n)}>
+                    {n} orang
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-          </div>
-
-          {/* Jumlah Penghuni */}
-          <div className="space-y-1.5">
-            <Label htmlFor="ci-persons">Jumlah Penghuni</Label>
-            <Input
-              id="ci-persons"
-              type="number"
-              min={1}
-              max={10}
-              value={occupiedPersons}
-              onChange={e => setOccupiedPersons(Math.max(1, parseInt(e.target.value) || 1))}
-              disabled={loading}
-            />
           </div>
 
           {/* Catatan */}
