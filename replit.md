@@ -10,7 +10,16 @@ A full Property Management System (PMS) web app for internal staff/receptionist 
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
+- `psql $DATABASE_URL -f migrations/001_add_users.sql` — seed default users (admin / operator / viewer)
+- `psql $DATABASE_URL -f migrations/002_seed_rooms.sql` — seed all 49 rooms + default PIN setting
 - Required env: `DATABASE_URL` — Postgres connection string, `SESSION_SECRET`
+
+### Default login credentials (after running seed)
+| Email | Password | Role |
+|---|---|---|
+| admin@wisma.id | admin123 | admin |
+| operator@wisma.id | operator123 | operator |
+| viewer@wisma.id | viewer123 | viewer |
 
 ## Stack
 
