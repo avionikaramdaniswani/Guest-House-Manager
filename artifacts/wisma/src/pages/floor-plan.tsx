@@ -247,7 +247,6 @@ function RoomDetailContent({
   const [checkoutConfirm, setCheckoutConfirm] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<"cash"|"transfer"|"card">("cash");
 
   const isOccupied = ["occupied_regular","long_stay_japan","long_stay_local"].includes(room.status);
 
@@ -279,7 +278,7 @@ function RoomDetailContent({
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ payment_method: paymentMethod }),
+        body: JSON.stringify({ payment_method: "cash" }),
       });
       if (!resp.ok) {
         const d = await resp.json().catch(() => ({}));
@@ -494,33 +493,13 @@ function RoomDetailContent({
             <div style={{ fontSize:12, color:"#92400e", background:"#fffbeb", border:"1px solid #fde68a", borderRadius:6, padding:"6px 12px", textAlign:"center", marginBottom:8 }}>
               Konfirmasi check-out <strong>{booking?.guest_name}</strong>?
             </div>
-            {/* Payment method selector */}
-            <div style={{ marginBottom:8 }}>
-              <p style={{ fontSize:11, color:"#6b7280", marginBottom:4 }}>Metode pembayaran:</p>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:4 }}>
-                {(["cash","transfer","card"] as const).map(m => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setPaymentMethod(m)}
-                    style={{
-                      fontSize:11, fontWeight:600, padding:"5px 0", borderRadius:6, cursor:"pointer", border:"1.5px solid",
-                      borderColor: paymentMethod === m ? "#0C447C" : "#d1d5db",
-                      background:  paymentMethod === m ? "#e8f0fb" : "#f9fafb",
-                      color:       paymentMethod === m ? "#0C447C" : "#374151",
-                    }}
-                  >
-                    {m === "cash" ? "Tunai" : m === "transfer" ? "Transfer" : "Kartu"}
-                  </button>
-                ))}
-              </div>
-            </div>
+
             {checkoutError && (
               <p style={{ fontSize:12, color:"#ef4444", textAlign:"center", marginBottom:6 }}>{checkoutError}</p>
             )}
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" className="h-9 text-sm"
-                onClick={() => { setCheckoutConfirm(false); setCheckoutError(null); setPaymentMethod("cash"); }}
+                onClick={() => { setCheckoutConfirm(false); setCheckoutError(null); }}
                 disabled={checkoutLoading}>
                 Batal
               </Button>
