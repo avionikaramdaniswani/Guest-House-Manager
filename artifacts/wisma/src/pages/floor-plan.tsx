@@ -710,12 +710,10 @@ function RoomDetailContent({
 
 // ─── Main component ─────────────────────────────────────────────
 export default function FloorPlan() {
-  const { data: rooms, isLoading, refetch } = useGetRooms();
+  const { data: rooms, isLoading, isError, refetch } = useGetRooms();
   const [selected, setSelected]   = useState<Room | null>(null);
   const [checkinOpen, setCheckinOpen] = useState(false);
   const isMobile = useIsMobile();
-
-  useEffect(() => { refetch(); }, []);
 
   const roomMap = useMemo(() => {
     const m = new Map<string, Room>();
@@ -734,6 +732,20 @@ export default function FloorPlan() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (isError && !rooms) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <p className="text-sm text-muted-foreground">Gagal memuat data kamar. Server mungkin sedang restart.</p>
+        <button
+          onClick={() => refetch()}
+          className="text-sm text-primary underline cursor-pointer"
+        >
+          Coba lagi
+        </button>
       </div>
     );
   }

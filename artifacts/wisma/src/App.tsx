@@ -3,8 +3,32 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
-import { useEffect } from "react";
+import { useEffect, Component, type ReactNode } from "react";
 import { AuthProvider, useAuth, type UserRole } from "@/contexts/auth-context";
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100vh", gap:12, fontFamily:"sans-serif" }}>
+          <p style={{ color:"#6b7280", fontSize:14 }}>Terjadi kesalahan. Silakan muat ulang halaman.</p>
+          <button
+            onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
+            style={{ fontSize:13, color:"#0C447C", background:"none", border:"none", cursor:"pointer", textDecoration:"underline" }}
+          >
+            Muat Ulang
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 import { Layout } from "@/components/layout";
 import Login from "@/pages/login";
@@ -16,7 +40,15 @@ import ActivityLog from "@/pages/activity-log";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      retryDelay: 1500,
+      staleTime: 10_000,
+    },
+  },
+});
 
 const routeRoles: Record<string, UserRole[]> = {
   "/":             ["viewer", "operator", "admin"],
@@ -77,18 +109,20 @@ function Router() {
 
 function App() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="light">
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <AuthProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Router />
-            </WouterRouter>
-            <Toaster />
-          </AuthProvider>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider attribute="class" defaultTheme="light">
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <AuthProvider>
+              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                <Router />
+              </WouterRouter>
+              <Toaster />
+            </AuthProvider>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 
