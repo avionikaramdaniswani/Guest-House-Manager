@@ -17,6 +17,9 @@ function toGuestShape(g: typeof guestsTable.$inferSelect) {
   return {
     id: g.id,
     name: g.name,
+    id_number: g.idNumber ?? "KARYAWAN",
+    id_type: (g.idType ?? "ktp") as "ktp" | "passport",
+    nationality: g.nationality ?? "",
     company: g.company ?? null,
     created_at: g.createdAt.toISOString(),
   };
