@@ -286,4 +286,88 @@ router.post("/bookings/:id/checkout", async (req, res): Promise<void> => {
   }));
 });
 
+
+// ── Extend stay ───────────────────────────────────────────────────
+const ExtendBody = z.object({
+  new_check_out_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal harus YYYY-MM-DD"),
+});
+
+router.post("/bookings/:id/extend", async (req, res): Promise<void> => {
+  const id = parseInt(String(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id), 10);
+  const parsed = ExtendBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const [existing] = await db.select().from(bookingsTable).where(eq(bookingsTable.id, id));
+  if (!existing) { res.status(404).json({ error: "Booking tidak ditemukan" }); return; }
+  if (existing.status !== "checked_in") {
+    res.status(400).json({ error: "Hanya booking aktif yang bisa diperpanjang" }); return;
+  }
+
+  if (parsed.data.new_check_out_date <= existing.checkOutDate) {
+    res.status(400).json({ error: "Tanggal baru harus setelah tanggal check-out sekarang" }); return;
+  }
+
+  const [booking] = await db.update(bookingsTable).set({
+    checkOutDate: parsed.data.new_check_out_date,
+    updatedAt: new Date(),
+  }).where(eq(bookingsTable.id, id)).returning();
+
+  const [room]  = await db.select().from(roomsTable).where(eq(roomsTable.id, booking.roomId));
+  const [guest] = await db.select().from(guestsTable).where(eq(guestsTable.id, booking.guestId));
+
+  await db.insert(activityLogsTable).values({
+    action: "update",
+    description: `Perpanjang menginap: ${guest?.name ?? ""} di kamar ${room?.number ?? ""} s/d ${parsed.data.new_check_out_date}`,
+    roomNumber: room?.number ?? null,
+    guestName: guest?.name ?? null,
+  });
+
+  res.json(await bookingWithDetails(booking));
+});
+
+// ── Move room ─────────────────────────────────────────────────────
+const MoveBody = z.object({
+  new_room_id: z.number().int(),
+});
+
+router.post("/bookings/:id/move", async (req, res): Promise<void> => {
+  const id = parseInt(String(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id), 10);
+  const parsed = MoveBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const [existing] = await db.select().from(bookingsTable).where(eq(bookingsTable.id, id));
+  if (!existing) { res.status(404).json({ error: "Booking tidak ditemukan" }); return; }
+  if (existing.status !== "checked_in") {
+    res.status(400).json({ error: "Hanya booking aktif yang bisa dipindahkan" }); return;
+  }
+
+  const [newRoom] = await db.select().from(roomsTable).where(eq(roomsTable.id, parsed.data.new_room_id));
+  if (!newRoom) { res.status(404).json({ error: "Kamar tujuan tidak ditemukan" }); return; }
+  if (newRoom.status !== "available") {
+    res.status(400).json({ error: "Kamar tujuan tidak tersedia" }); return;
+  }
+
+  const oldRoomId = existing.roomId;
+
+  const [booking] = await db.update(bookingsTable).set({
+    roomId: parsed.data.new_room_id,
+    updatedAt: new Date(),
+  }).where(eq(bookingsTable.id, id)).returning();
+
+  await db.update(roomsTable).set({ status: "available", updatedAt: new Date() }).where(eq(roomsTable.id, oldRoomId));
+  await db.update(roomsTable).set({ status: roomStatusFor(existing.stayType), updatedAt: new Date() }).where(eq(roomsTable.id, parsed.data.new_room_id));
+
+  const [oldRoom] = await db.select().from(roomsTable).where(eq(roomsTable.id, oldRoomId));
+  const [guest]   = await db.select().from(guestsTable).where(eq(guestsTable.id, booking.guestId));
+
+  await db.insert(activityLogsTable).values({
+    action: "update",
+    description: `Pindah kamar: ${guest?.name ?? ""} dari kamar ${oldRoom?.number ?? ""} ke kamar ${newRoom.number}`,
+    roomNumber: newRoom.number,
+    guestName: guest?.name ?? null,
+  });
+
+  res.json(await bookingWithDetails(booking));
+});
+
 export default router;

@@ -12,7 +12,7 @@ import { getToken } from "@/lib/auth";
 import {
   User, Building2, CalendarDays, CalendarOff, LogOut,
   UserCheck, Lock, Unlock, CheckCircle2, Loader2, Users,
-  FileText, AlertTriangle,
+  FileText, AlertTriangle, ArrowLeftRight,
 } from "lucide-react";
 
 // ─── Grid constants ─────────────────────────────────────────────
@@ -77,6 +77,11 @@ function typeLabel(t: string) {
 }
 function diffDays(from: string, to: string) {
   return Math.ceil((new Date(to).getTime() - new Date(from).getTime()) / 86400000);
+}
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split("T")[0];
 }
 
 // ─── Cell components (defined OUTSIDE main component) ───────────
@@ -242,11 +247,22 @@ function RoomDetailContent({
 }) {
   const qc = useQueryClient();
   const { data: detail, isLoading: loadingDetail } = useGetRoom(room.id);
+  const { data: allRooms } = useGetRooms();
   const booking = detail?.current_booking ?? null;
 
   const [checkoutConfirm, setCheckoutConfirm] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError]     = useState<string | null>(null);
+
+  const [panelMode, setPanelMode]   = useState<"default" | "extend" | "move">("default");
+  const [extendDate, setExtendDate] = useState<string>("");
+  const [extendLoading, setExtendLoading] = useState(false);
+  const [extendError, setExtendError]     = useState<string | null>(null);
+  const [moveRoomId, setMoveRoomId] = useState<number | null>(null);
+  const [moveLoading, setMoveLoading] = useState(false);
+  const [moveError, setMoveError]     = useState<string | null>(null);
+
+  const availableRooms = (allRooms ?? []).filter(r => r.status === "available" && !r.is_facility && r.id !== room.id);
 
   const isOccupied = ["occupied_regular","long_stay_japan","long_stay_local"].includes(room.status);
 
@@ -255,51 +271,96 @@ function RoomDetailContent({
   const nightsStayed = booking ? Math.min(totalNights, Math.max(1, diffDays(String(booking.check_in_date), today))) : 0;
   const daysLeft     = booking ? diffDays(today, String(booking.check_out_date)) : 0;
 
-  // Designation for available room
   const designation =
     JAPAN_LONGSTAY_ROOMS.has(room.number) ? { label:"Long Stay — Jepang", color:"#f97316" } :
     LOCAL_LONGSTAY_ROOMS.has(room.number) ? { label:"Long Stay — Lokal",  color:"#3b82f6" } :
     LOCAL_SINGLE_ROOMS.has(room.number)   ? { label:"Kamar Lokal (★)",    color:"#60a5fa" } :
     null;
 
-  const headerBg = roomBg(room.status, room.number);
-  const headerFg = roomFg(room.status, room.number);
+  const headerBg  = roomBg(room.status, room.number);
+  const headerFg  = roomFg(room.status, room.number);
   const isWhiteBg = headerBg === "#ffffff";
 
   async function handleCheckout() {
     if (!booking) return;
-    setCheckoutLoading(true);
-    setCheckoutError(null);
+    setCheckoutLoading(true); setCheckoutError(null);
     try {
       const token = getToken();
       const resp = await fetch(`/api/bookings/${booking.id}/checkout`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ payment_method: "cash" }),
       });
-      if (!resp.ok) {
-        const d = await resp.json().catch(() => ({}));
-        setCheckoutError(d.error ?? "Gagal check-out");
-        return;
-      }
+      if (!resp.ok) { const d = await resp.json().catch(() => ({})); setCheckoutError(d.error ?? "Gagal check-out"); return; }
       await qc.invalidateQueries({ queryKey: getGetRoomsQueryKey() });
-      onRefresh();
-      onClose();
-    } catch {
-      setCheckoutError("Terjadi kesalahan jaringan.");
-    } finally {
-      setCheckoutLoading(false);
-    }
+      onRefresh(); onClose();
+    } catch { setCheckoutError("Terjadi kesalahan jaringan."); }
+    finally { setCheckoutLoading(false); }
   }
+
+  async function handleExtend() {
+    if (!booking || !extendDate) return;
+    setExtendLoading(true); setExtendError(null);
+    try {
+      const token = getToken();
+      const resp = await fetch(`/api/bookings/${booking.id}/extend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ new_check_out_date: extendDate }),
+      });
+      if (!resp.ok) { const d = await resp.json().catch(() => ({})); setExtendError(d.error ?? "Gagal memperpanjang"); return; }
+      await qc.invalidateQueries({ queryKey: getGetRoomsQueryKey() });
+      onRefresh(); setPanelMode("default");
+    } catch { setExtendError("Terjadi kesalahan jaringan."); }
+    finally { setExtendLoading(false); }
+  }
+
+  async function handleMove() {
+    if (!booking || !moveRoomId) return;
+    setMoveLoading(true); setMoveError(null);
+    try {
+      const token = getToken();
+      const resp = await fetch(`/api/bookings/${booking.id}/move`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ new_room_id: moveRoomId }),
+      });
+      if (!resp.ok) { const d = await resp.json().catch(() => ({})); setMoveError(d.error ?? "Gagal memindahkan kamar"); return; }
+      await qc.invalidateQueries({ queryKey: getGetRoomsQueryKey() });
+      onRefresh(); onClose();
+    } catch { setMoveError("Terjadi kesalahan jaringan."); }
+    finally { setMoveLoading(false); }
+  }
+
+  function enterExtend() {
+    const base = booking?.check_out_date ? String(booking.check_out_date) : today;
+    setExtendDate(addDays(base, 7));
+    setExtendError(null);
+    setPanelMode("extend");
+  }
+
+  function enterMove() {
+    setMoveRoomId(null);
+    setMoveError(null);
+    setPanelMode("move");
+  }
+
+  const selectedMoveRoom = moveRoomId ? allRooms?.find(r => r.id === moveRoomId) : null;
 
   return (
     <div style={{ height:"100%", display:"flex", flexDirection:"column", overflow:"hidden", background:"#fff" }}>
 
       {/* ── Header ── */}
       <div style={{ background:headerBg, color:headerFg, padding:"16px 18px 14px", flexShrink:0, borderBottom: isWhiteBg ? "1px solid #f3f4f6" : "none" }}>
+        {panelMode !== "default" && (
+          <button onClick={() => setPanelMode("default")} style={{
+            fontSize:11, color: isWhiteBg ? "#6b7280" : "rgba(255,255,255,0.72)",
+            background:"none", border:"none", cursor:"pointer", padding:0, marginBottom:8,
+            display:"flex", alignItems:"center", gap:4,
+          }}>
+            ← Kembali
+          </button>
+        )}
         <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.12em", opacity:0.65, marginBottom:6 }}>
           Blok {room.block} · {"★".repeat(room.stars)} · {typeLabel(room.type)}
         </div>
@@ -308,8 +369,14 @@ function RoomDetailContent({
             <div style={{ fontSize:32, fontWeight:900, lineHeight:1, letterSpacing:"-0.02em" }}>
               Kamar {room.number}
             </div>
-            {designation && room.status === "available" && (
+            {panelMode === "default" && designation && room.status === "available" && (
               <div style={{ fontSize:11, fontWeight:600, marginTop:5, opacity:0.8 }}>{designation.label}</div>
+            )}
+            {panelMode === "extend" && (
+              <div style={{ fontSize:12, fontWeight:600, marginTop:4, opacity:0.8 }}>Perpanjang Menginap</div>
+            )}
+            {panelMode === "move" && (
+              <div style={{ fontSize:12, fontWeight:600, marginTop:4, opacity:0.8 }}>Pindah Kamar</div>
             )}
           </div>
           <div style={{
@@ -326,210 +393,316 @@ function RoomDetailContent({
       {/* ── Body ── */}
       <div style={{ flex:1, overflowY:"auto" }}>
 
-        {/* ── AVAILABLE ── */}
-        {room.status === "available" && (
+        {/* ─── DEFAULT ─────────────────────────────────────────── */}
+        {panelMode === "default" && (
           <>
-            <PanelSection label="Status Kamar">
-              <div style={{ fontSize:13, color:"#6b7280", paddingTop:4 }}>
-                Kamar kosong — siap untuk check-in tamu baru.
-              </div>
-              {room.notes && (
-                <div style={{ marginTop:10, background:"#f9fafb", borderRadius:6, padding:"8px 12px", fontSize:13, color:"#374151" }}>
-                  {room.notes}
-                </div>
-              )}
-            </PanelSection>
-            {designation && (
+            {room.status === "available" && (
               <>
-                <PanelDivider />
-                <PanelSection label="Peruntukan">
-                  <div style={{ display:"flex", alignItems:"center", gap:8, paddingTop:4 }}>
-                    <div style={{ width:12, height:12, borderRadius:2, background:designation.color, flexShrink:0 }} />
-                    <span style={{ fontSize:13, fontWeight:600, color:"#111827" }}>{designation.label}</span>
+                <PanelSection label="Status Kamar">
+                  <div style={{ fontSize:13, color:"#6b7280", paddingTop:4 }}>
+                    Kamar kosong — siap untuk check-in tamu baru.
                   </div>
+                  {room.notes && (
+                    <div style={{ marginTop:10, background:"#f9fafb", borderRadius:6, padding:"8px 12px", fontSize:13, color:"#374151" }}>
+                      {room.notes}
+                    </div>
+                  )}
                 </PanelSection>
+                {designation && (
+                  <>
+                    <PanelDivider />
+                    <PanelSection label="Peruntukan">
+                      <div style={{ display:"flex", alignItems:"center", gap:8, paddingTop:4 }}>
+                        <div style={{ width:12, height:12, borderRadius:2, background:designation.color, flexShrink:0 }} />
+                        <span style={{ fontSize:13, fontWeight:600, color:"#111827" }}>{designation.label}</span>
+                      </div>
+                    </PanelSection>
+                  </>
+                )}
               </>
+            )}
+
+            {room.status === "blocked" && (
+              <PanelSection label="Status Kamar">
+                <div style={{ fontSize:13, color:"#6b7280", paddingTop:4 }}>
+                  Kamar tidak dapat digunakan sementara.
+                </div>
+                {room.notes && (
+                  <div style={{ marginTop:10, background:"#f9fafb", borderRadius:6, padding:"8px 12px", fontSize:13, color:"#374151" }}>
+                    {room.notes}
+                  </div>
+                )}
+              </PanelSection>
+            )}
+
+            {isOccupied && (
+              loadingDetail ? (
+                <div style={{ display:"flex", justifyContent:"center", alignItems:"center", padding:"48px 0", color:"#9ca3af" }}>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                </div>
+              ) : booking ? (
+                <>
+                  <PanelSection label="Tamu">
+                    <div style={{ fontSize:20, fontWeight:800, color:"#111827", marginBottom:8, lineHeight:1.2 }}>
+                      {booking.guest_name}
+                    </div>
+                    {booking.guest_company && <InfoRow label="Perusahaan" value={booking.guest_company} />}
+                    <InfoRow label="Tipe stay" value={
+                      booking.stay_type === "long_stay_japan" ? "Long Stay — Jepang" :
+                      booking.stay_type === "long_stay_local" ? "Long Stay — Lokal" : "Reguler"
+                    } />
+                    <InfoRow label="Jumlah tamu" value={`${booking.occupied_persons} orang`} />
+                  </PanelSection>
+
+                  <PanelDivider />
+
+                  <PanelSection label="Menginap">
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr auto 1fr", alignItems:"center", gap:8, marginBottom:14 }}>
+                      <div>
+                        <div style={S.labelSm}>Check-in</div>
+                        <div style={{ fontSize:13, fontWeight:700, color:"#111827", marginTop:3 }}>
+                          {formatDate(String(booking.check_in_date))}
+                        </div>
+                      </div>
+                      <div style={{ fontSize:14, color:"#d1d5db", fontWeight:300 }}>→</div>
+                      <div style={{ textAlign:"right" }}>
+                        <div style={{ ...S.labelSm, textAlign:"right" }}>Check-out</div>
+                        <div style={{ fontSize:13, fontWeight:700, color:"#111827", marginTop:3 }}>
+                          {formatDate(String(booking.check_out_date))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      display:"grid", gridTemplateColumns:"repeat(3,1fr)",
+                      background:"#f9fafb", border:"1px solid #f3f4f6", borderRadius:8,
+                      textAlign:"center", overflow:"hidden",
+                    }}>
+                      <div style={{ padding:"12px 0" }}>
+                        <div style={{ fontSize:26, fontWeight:900, color:"#374151", lineHeight:1 }}>{nightsStayed}</div>
+                        <div style={{ fontSize:10, color:"#9ca3af", marginTop:5 }}>Malam ke</div>
+                      </div>
+                      <div style={{ padding:"12px 0", borderLeft:"1px solid #e5e7eb", borderRight:"1px solid #e5e7eb" }}>
+                        <div style={{
+                          fontSize:26, fontWeight:900, lineHeight:1,
+                          color: daysLeft < 0 ? "#ef4444" : daysLeft === 0 ? "#f97316" : daysLeft <= 3 ? "#eab308" : "#22c55e",
+                        }}>
+                          {Math.abs(daysLeft)}
+                        </div>
+                        <div style={{ fontSize:10, color:"#9ca3af", marginTop:5 }}>
+                          {daysLeft < 0 ? "Hari lewat" : "Sisa hari"}
+                        </div>
+                      </div>
+                      <div style={{ padding:"12px 0" }}>
+                        <div style={{ fontSize:26, fontWeight:900, color:"#374151", lineHeight:1 }}>{totalNights}</div>
+                        <div style={{ fontSize:10, color:"#9ca3af", marginTop:5 }}>Total malam</div>
+                      </div>
+                    </div>
+
+                    {daysLeft < 0 && <PanelAlert type="error">Lewat {Math.abs(daysLeft)} hari dari jadwal check-out</PanelAlert>}
+                    {daysLeft === 0 && <PanelAlert type="warn">Check-out hari ini</PanelAlert>}
+                    {daysLeft > 0 && daysLeft <= 3 && <PanelAlert type="warn">Akan check-out dalam {daysLeft} hari</PanelAlert>}
+                  </PanelSection>
+
+                  {booking.notes && (
+                    <>
+                      <PanelDivider />
+                      <PanelSection label="Catatan">
+                        <div style={{ fontSize:13, color:"#374151", lineHeight:1.65 }}>{booking.notes}</div>
+                      </PanelSection>
+                    </>
+                  )}
+                </>
+              ) : (
+                <div style={{ padding:"20px 18px", textAlign:"center", color:"#9ca3af", fontSize:13 }}>
+                  Data tamu tidak tersedia.
+                </div>
+              )
             )}
           </>
         )}
 
-        {/* ── BLOCKED ── */}
-        {room.status === "blocked" && (
-          <PanelSection label="Status Kamar">
-            <div style={{ fontSize:13, color:"#6b7280", paddingTop:4 }}>
-              Kamar tidak dapat digunakan sementara.
-            </div>
-            {room.notes && (
-              <div style={{ marginTop:10, background:"#f9fafb", borderRadius:6, padding:"8px 12px", fontSize:13, color:"#374151" }}>
-                {room.notes}
+        {/* ─── EXTEND ──────────────────────────────────────────── */}
+        {panelMode === "extend" && (
+          <div style={{ padding:"18px 18px 0" }}>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr auto 1fr", alignItems:"center", gap:8, marginBottom:20 }}>
+              <div>
+                <div style={{ fontSize:10, color:"#9ca3af", marginBottom:4, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.06em" }}>Sekarang</div>
+                <div style={{ fontSize:15, fontWeight:700, color:"#374151" }}>
+                  {booking ? formatDate(String(booking.check_out_date)) : "—"}
+                </div>
               </div>
-            )}
-          </PanelSection>
+              <ArrowLeftRight style={{ width:15, height:15, color:"#d1d5db" }} />
+              <div style={{ textAlign:"right" }}>
+                <div style={{ fontSize:10, color:"#9ca3af", marginBottom:4, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.06em" }}>Checkout baru</div>
+                <div style={{ fontSize:15, fontWeight:700, color: extendDate ? "#0C447C" : "#d1d5db" }}>
+                  {extendDate ? formatDate(extendDate) : "—"}
+                </div>
+              </div>
+            </div>
+            <div style={{ fontSize:11, color:"#9ca3af", marginBottom:6 }}>Tanggal check-out baru</div>
+            <input
+              type="date"
+              value={extendDate}
+              min={booking ? addDays(String(booking.check_out_date), 1) : ""}
+              onChange={e => setExtendDate(e.target.value)}
+              style={{
+                width:"100%", padding:"10px 12px", fontSize:14, fontWeight:600,
+                border:"1.5px solid #e5e7eb", borderRadius:8, outline:"none",
+                color:"#111827", background:"#fff", boxSizing:"border-box",
+              }}
+            />
+            {extendError && <p style={{ fontSize:12, color:"#ef4444", marginTop:10 }}>{extendError}</p>}
+          </div>
         )}
 
-        {/* ── OCCUPIED ── */}
-        {isOccupied && (
-          loadingDetail ? (
-            <div style={{ display:"flex", justifyContent:"center", alignItems:"center", padding:"48px 0", color:"#9ca3af" }}>
-              <Loader2 className="w-5 h-5 animate-spin" />
+        {/* ─── MOVE ────────────────────────────────────────────── */}
+        {panelMode === "move" && (
+          <div>
+            <div style={{ padding:"14px 18px 6px", fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", color:"#9ca3af" }}>
+              Pilih Kamar Tujuan
             </div>
-          ) : booking ? (
-            <>
-              {/* ── Tamu ── */}
-              <PanelSection label="Tamu">
-                <div style={{ fontSize:20, fontWeight:800, color:"#111827", marginBottom:8, lineHeight:1.2 }}>
-                  {booking.guest_name}
-                </div>
-                {booking.guest_company && <InfoRow label="Perusahaan" value={booking.guest_company} />}
-                <InfoRow
-                  label="Tipe stay"
-                  value={booking.stay_type === "long_stay" ? "Long Stay" : "Reguler"}
-                />
-                <InfoRow label="Jumlah tamu" value={`${booking.occupied_persons} orang`} />
-              </PanelSection>
-
-              <PanelDivider />
-
-              {/* ── Menginap ── */}
-              <PanelSection label="Menginap">
-                {/* Dates row */}
-                <div style={{ display:"grid", gridTemplateColumns:"1fr auto 1fr", alignItems:"center", gap:8, marginBottom:14 }}>
-                  <div>
-                    <div style={S.labelSm}>Check-in</div>
-                    <div style={{ fontSize:13, fontWeight:700, color:"#111827", marginTop:3 }}>
-                      {formatDate(String(booking.check_in_date))}
-                    </div>
-                  </div>
-                  <div style={{ fontSize:14, color:"#d1d5db", fontWeight:300 }}>→</div>
-                  <div style={{ textAlign:"right" }}>
-                    <div style={{ ...S.labelSm, textAlign:"right" }}>Check-out</div>
-                    <div style={{ fontSize:13, fontWeight:700, color:"#111827", marginTop:3 }}>
-                      {formatDate(String(booking.check_out_date))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Night counter */}
-                <div style={{
-                  display:"grid", gridTemplateColumns:"repeat(3,1fr)",
-                  background:"#f9fafb", border:"1px solid #f3f4f6", borderRadius:8,
-                  textAlign:"center", overflow:"hidden",
+            {moveError && <div style={{ margin:"0 18px 8px", fontSize:12, color:"#ef4444" }}>{moveError}</div>}
+            {availableRooms.length === 0 ? (
+              <div style={{ padding:"32px 18px", color:"#9ca3af", fontSize:13, textAlign:"center" }}>
+                Tidak ada kamar tersedia saat ini.
+              </div>
+            ) : availableRooms.map(r => {
+              const des = JAPAN_LONGSTAY_ROOMS.has(r.number) ? { label:"Jepang", color:"#f97316" }
+                : LOCAL_LONGSTAY_ROOMS.has(r.number) ? { label:"Lokal", color:"#3b82f6" }
+                : LOCAL_SINGLE_ROOMS.has(r.number)   ? { label:"Lokal ★", color:"#60a5fa" }
+                : null;
+              const isSel = moveRoomId === r.id;
+              return (
+                <button key={r.id} onClick={() => setMoveRoomId(isSel ? null : r.id)} style={{
+                  display:"flex", alignItems:"center", gap:12, padding:"10px 18px",
+                  width:"100%", textAlign:"left", border:"none",
+                  borderBottom:"1px solid #f3f4f6",
+                  background: isSel ? "#eff6ff" : "#fff", cursor:"pointer",
                 }}>
-                  <div style={{ padding:"12px 0" }}>
-                    <div style={{ fontSize:26, fontWeight:900, color:"#374151", lineHeight:1 }}>{nightsStayed}</div>
-                    <div style={{ fontSize:10, color:"#9ca3af", marginTop:5 }}>Malam ke</div>
+                  <div style={{
+                    width:38, height:38, borderRadius:6,
+                    background: isSel ? "#0C447C" : "#f3f4f6",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    fontWeight:800, fontSize:13,
+                    color: isSel ? "#fff" : "#374151", flexShrink:0,
+                  }}>
+                    {r.number}
                   </div>
-                  <div style={{ padding:"12px 0", borderLeft:"1px solid #e5e7eb", borderRight:"1px solid #e5e7eb" }}>
-                    <div style={{
-                      fontSize:26, fontWeight:900, lineHeight:1,
-                      color: daysLeft < 0 ? "#ef4444" : daysLeft === 0 ? "#f97316" : daysLeft <= 3 ? "#eab308" : "#22c55e",
-                    }}>
-                      {Math.abs(daysLeft)}
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#111827" }}>
+                      Kamar {r.number}
+                      <span style={{ fontWeight:400, fontSize:11, color:"#9ca3af", marginLeft:6 }}>Blok {r.block}</span>
                     </div>
-                    <div style={{ fontSize:10, color:"#9ca3af", marginTop:5 }}>
-                      {daysLeft < 0 ? "Hari lewat" : "Sisa hari"}
+                    <div style={{ fontSize:11, color:"#6b7280", marginTop:2 }}>
+                      {"★".repeat(r.stars)} · {typeLabel(r.type)}
+                      {des && <span style={{ marginLeft:8, color:des.color, fontWeight:600 }}>{des.label}</span>}
                     </div>
                   </div>
-                  <div style={{ padding:"12px 0" }}>
-                    <div style={{ fontSize:26, fontWeight:900, color:"#374151", lineHeight:1 }}>{totalNights}</div>
-                    <div style={{ fontSize:10, color:"#9ca3af", marginTop:5 }}>Total malam</div>
-                  </div>
-                </div>
-
-                {/* Alerts */}
-                {daysLeft < 0 && (
-                  <PanelAlert type="error">
-                    Lewat {Math.abs(daysLeft)} hari dari jadwal check-out
-                  </PanelAlert>
-                )}
-                {daysLeft === 0 && (
-                  <PanelAlert type="warn">Check-out hari ini</PanelAlert>
-                )}
-                {daysLeft > 0 && daysLeft <= 3 && (
-                  <PanelAlert type="warn">Akan check-out dalam {daysLeft} hari</PanelAlert>
-                )}
-              </PanelSection>
-
-              {/* ── Catatan ── */}
-              {booking.notes && (
-                <>
-                  <PanelDivider />
-                  <PanelSection label="Catatan">
-                    <div style={{ fontSize:13, color:"#374151", lineHeight:1.65 }}>{booking.notes}</div>
-                  </PanelSection>
-                </>
-              )}
-            </>
-          ) : (
-            <div style={{ padding:"20px 18px", textAlign:"center", color:"#9ca3af", fontSize:13 }}>
-              Data tamu tidak tersedia.
-            </div>
-          )
+                  {isSel && <CheckCircle2 style={{ width:16, height:16, color:"#0C447C", flexShrink:0 }} />}
+                </button>
+              );
+            })}
+          </div>
         )}
+
       </div>
 
       {/* ── Action Buttons ── */}
       <div style={{ padding:"12px 16px 16px", borderTop:"1px solid #f3f4f6", flexShrink:0, background:"#fff" }}>
 
-        {/* Check-in */}
-        {room.status === "available" && (
-          <Button className="w-full h-10 text-sm font-semibold mb-2" onClick={onCheckin}>
-            <UserCheck className="w-4 h-4 mr-2" />
-            Check-in Tamu
-          </Button>
-        )}
-
-        {/* Check-out button */}
-        {isOccupied && !checkoutConfirm && (
-          <Button variant="secondary" className="w-full h-10 text-sm font-semibold mb-2" onClick={() => setCheckoutConfirm(true)}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Check-out
-          </Button>
-        )}
-
-        {/* Check-out confirmation */}
-        {isOccupied && checkoutConfirm && (
-          <div style={{ marginBottom:8 }}>
-            <div style={{ fontSize:12, color:"#92400e", background:"#fffbeb", border:"1px solid #fde68a", borderRadius:6, padding:"6px 12px", textAlign:"center", marginBottom:8 }}>
-              Konfirmasi check-out <strong>{booking?.guest_name}</strong>?
-            </div>
-
-            {checkoutError && (
-              <p style={{ fontSize:12, color:"#ef4444", textAlign:"center", marginBottom:6 }}>{checkoutError}</p>
+        {/* ─── DEFAULT ── */}
+        {panelMode === "default" && (
+          <>
+            {room.status === "available" && (
+              <Button className="w-full h-10 text-sm font-semibold mb-2" onClick={onCheckin}>
+                <UserCheck className="w-4 h-4 mr-2" />Check-in Tamu
+              </Button>
             )}
+
+            {isOccupied && !checkoutConfirm && (
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <Button variant="outline" className="h-9 text-xs font-semibold" onClick={enterExtend}>
+                  <CalendarDays className="w-3.5 h-3.5 mr-1.5" />Perpanjang
+                </Button>
+                <Button variant="outline" className="h-9 text-xs font-semibold" onClick={enterMove}>
+                  <ArrowLeftRight className="w-3.5 h-3.5 mr-1.5" />Pindah Kamar
+                </Button>
+              </div>
+            )}
+
+            {isOccupied && !checkoutConfirm && (
+              <Button variant="secondary" className="w-full h-10 text-sm font-semibold mb-2" onClick={() => setCheckoutConfirm(true)}>
+                <LogOut className="w-4 h-4 mr-2" />Check-out
+              </Button>
+            )}
+
+            {isOccupied && checkoutConfirm && (
+              <div style={{ marginBottom:8 }}>
+                <div style={{ fontSize:12, color:"#92400e", background:"#fffbeb", border:"1px solid #fde68a", borderRadius:6, padding:"6px 12px", textAlign:"center", marginBottom:8 }}>
+                  Konfirmasi check-out <strong>{booking?.guest_name}</strong>?
+                </div>
+                {checkoutError && <p style={{ fontSize:12, color:"#ef4444", textAlign:"center", marginBottom:6 }}>{checkoutError}</p>}
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" className="h-9 text-sm"
+                    onClick={() => { setCheckoutConfirm(false); setCheckoutError(null); }}
+                    disabled={checkoutLoading}>Batal</Button>
+                  <Button variant="destructive" className="h-9 text-sm"
+                    onClick={handleCheckout} disabled={checkoutLoading}>
+                    {checkoutLoading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+                    Ya, Check-out
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" className="h-9 text-sm"
-                onClick={() => { setCheckoutConfirm(false); setCheckoutError(null); }}
-                disabled={checkoutLoading}>
-                Batal
+              <Button variant="outline" size="sm" className="h-8 text-xs">
+                <FileText className="w-3 h-3 mr-1.5" />Edit Catatan
               </Button>
-              <Button variant="destructive" className="h-9 text-sm"
-                onClick={handleCheckout} disabled={checkoutLoading}>
-                {checkoutLoading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
-                Ya, Check-out
-              </Button>
+              {room.status === "blocked" ? (
+                <Button variant="outline" size="sm" className="h-8 text-xs text-green-600 hover:bg-green-50">
+                  <Unlock className="w-3 h-3 mr-1.5" />Buka Blokir
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" className="h-8 text-xs text-destructive hover:bg-destructive/10">
+                  <Lock className="w-3 h-3 mr-1.5" />Blokir Kamar
+                </Button>
+              )}
             </div>
+          </>
+        )}
+
+        {/* ─── EXTEND ── */}
+        {panelMode === "extend" && (
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" className="h-10 text-sm"
+              onClick={() => setPanelMode("default")} disabled={extendLoading}>
+              Batal
+            </Button>
+            <Button className="h-10 text-sm font-semibold"
+              onClick={handleExtend} disabled={extendLoading || !extendDate}>
+              {extendLoading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+              Konfirmasi
+            </Button>
           </div>
         )}
 
-        {/* Secondary */}
-        <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" size="sm" className="h-8 text-xs">
-            <FileText className="w-3 h-3 mr-1.5" />
-            Edit Catatan
-          </Button>
-          {room.status === "blocked" ? (
-            <Button variant="outline" size="sm" className="h-8 text-xs text-green-600 hover:bg-green-50">
-              <Unlock className="w-3 h-3 mr-1.5" />
-              Buka Blokir
+        {/* ─── MOVE ── */}
+        {panelMode === "move" && (
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" className="h-10 text-sm"
+              onClick={() => setPanelMode("default")} disabled={moveLoading}>
+              Batal
             </Button>
-          ) : (
-            <Button variant="outline" size="sm" className="h-8 text-xs text-destructive hover:bg-destructive/10">
-              <Lock className="w-3 h-3 mr-1.5" />
-              Blokir Kamar
+            <Button className="h-10 text-sm font-semibold"
+              onClick={handleMove} disabled={moveLoading || !moveRoomId}>
+              {moveLoading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+              {selectedMoveRoom ? `Pindah ke ${selectedMoveRoom.number}` : "Pilih Kamar"}
             </Button>
-          )}
-        </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
