@@ -284,10 +284,8 @@ router.post("/bookings/:id/checkout", async (req, res): Promise<void> => {
     guestName: guest?.name ?? null,
   });
 
-  res.json(CheckOutResponse.parse({
-    booking: await bookingWithDetails(booking),
-    nights,
-  }));
+  const bookingDetail = await bookingWithDetails(booking);
+  res.json(CheckOutResponse.parse({ booking: bookingDetail, nights }));
 });
 
 

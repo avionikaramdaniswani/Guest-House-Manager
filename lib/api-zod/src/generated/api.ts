@@ -406,8 +406,6 @@ export const CheckOutParams = zod.object({
 })
 
 export const CheckOutBody = zod.object({
-  "payment_method": zod.enum(['cash', 'transfer', 'card']),
-  "additional_charges": zod.number().nullish(),
   "notes": zod.string().nullish()
 })
 
@@ -434,12 +432,7 @@ export const CheckOutResponse = zod.object({
   "notes": zod.string().nullish(),
   "created_at": zod.coerce.date()
 }),
-  "nights": zod.number(),
-  "subtotal": zod.number(),
-  "additional_charges": zod.number(),
-  "deposit_paid": zod.number(),
-  "total_due": zod.number(),
-  "payment_method": zod.string()
+  "nights": zod.number()
 })
 
 

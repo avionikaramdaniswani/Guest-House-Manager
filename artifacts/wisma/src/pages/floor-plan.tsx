@@ -289,7 +289,7 @@ function RoomDetailContent({
       const resp = await fetch(`/api/bookings/${booking.id}/checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ payment_method: "cash" }),
+        body: JSON.stringify({}),
       });
       if (!resp.ok) { const d = await resp.json().catch(() => ({})); setCheckoutError(d.error ?? "Gagal check-out"); return; }
       await qc.invalidateQueries({ queryKey: getGetRoomsQueryKey() });
