@@ -57,6 +57,9 @@ export default function CheckinDialog({ room, open, onOpenChange, onSuccess }: P
 
   const [guestName, setGuestName]             = useState("");
   const [company, setCompany]                 = useState("");
+  const [idType, setIdType]                   = useState<"ktp" | "passport">("ktp");
+  const [idNumber, setIdNumber]               = useState("");
+  const [nationality, setNationality]         = useState("ID");
   const [stayType, setStayType]               = useState<StayType>(() => defaultStayType(room.number));
   const [checkIn, setCheckIn]                 = useState(today);
   const [checkOut, setCheckOut]               = useState(() => {
@@ -74,6 +77,9 @@ export default function CheckinDialog({ room, open, onOpenChange, onSuccess }: P
     if (open) {
       setGuestName("");
       setCompany("");
+      setIdType("ktp");
+      setIdNumber("");
+      setNationality("ID");
       setStayType(defaultStayType(room.number));
       setCheckIn(today);
       const d = new Date(); d.setDate(d.getDate() + 1);
@@ -87,6 +93,7 @@ export default function CheckinDialog({ room, open, onOpenChange, onSuccess }: P
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!guestName.trim()) { setError("Nama tamu wajib diisi."); return; }
+    if (!idNumber.trim()) { setError("NIK / No. Identitas wajib diisi."); return; }
     if (totalDays <= 0) { setError("Tanggal keluar harus setelah tanggal masuk."); return; }
 
     setLoading(true);
@@ -104,6 +111,9 @@ export default function CheckinDialog({ room, open, onOpenChange, onSuccess }: P
           room_id: room.id,
           guest_name: guestName.trim(),
           company: company.trim() || null,
+          id_number: idNumber.trim(),
+          id_type: idType,
+          nationality: nationality.trim() || "ID",
           check_in_date: checkIn,
           check_out_date: checkOut,
           stay_type: stayType,
@@ -164,6 +174,48 @@ export default function CheckinDialog({ room, open, onOpenChange, onSuccess }: P
               value={company}
               onChange={e => setCompany(e.target.value)}
               disabled={loading}
+            />
+          </div>
+
+          {/* Jenis & Nomor Identitas */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <Label>Jenis ID</Label>
+              <Select value={idType} onValueChange={v => setIdType(v as "ktp" | "passport")} disabled={loading}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ktp">KTP</SelectItem>
+                  <SelectItem value="passport">Paspor</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="col-span-2 space-y-1.5">
+              <Label htmlFor="ci-idnumber">
+                {idType === "ktp" ? "NIK" : "No. Paspor"} <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="ci-idnumber"
+                placeholder={idType === "ktp" ? "16 digit NIK" : "Nomor paspor"}
+                value={idNumber}
+                onChange={e => setIdNumber(e.target.value)}
+                disabled={loading}
+                maxLength={idType === "ktp" ? 16 : 20}
+              />
+            </div>
+          </div>
+
+          {/* Kebangsaan */}
+          <div className="space-y-1.5">
+            <Label htmlFor="ci-nationality">Kebangsaan</Label>
+            <Input
+              id="ci-nationality"
+              placeholder="Kode negara, mis: ID, JP, US"
+              value={nationality}
+              onChange={e => setNationality(e.target.value.toUpperCase())}
+              disabled={loading}
+              maxLength={3}
             />
           </div>
 

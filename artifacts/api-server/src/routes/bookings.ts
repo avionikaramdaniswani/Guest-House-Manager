@@ -23,6 +23,9 @@ const DirectCheckInBody = z.object({
   room_id:          z.number().int(),
   guest_name:       z.string().min(1),
   company:          z.string().nullish(),
+  id_number:        z.string().min(1),
+  id_type:          z.enum(["ktp", "passport"]).default("ktp"),
+  nationality:      z.string().default("ID"),
   check_in_date:    z.string(),
   check_out_date:   z.string(),
   stay_type:        z.enum(["regular", "long_stay_japan", "long_stay_local"]),
@@ -86,8 +89,9 @@ router.post("/direct-checkin", async (req, res): Promise<void> => {
   const [guest] = await db.insert(guestsTable).values({
     name: d.guest_name,
     company: d.company ?? null,
-    idNumber: "KARYAWAN",
-    idType: "ktp",
+    idNumber: d.id_number,
+    idType: d.id_type,
+    nationality: d.nationality,
   }).returning();
 
   const [booking] = await db.insert(bookingsTable).values({
