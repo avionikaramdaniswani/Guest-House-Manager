@@ -47,8 +47,9 @@ router.post("/guests", async (req, res): Promise<void> => {
   const [guest] = await db.insert(guestsTable).values({
     name: parsed.data.name,
     company: parsed.data.company ?? null,
-    idNumber: "KARYAWAN",
-    idType: "ktp",
+    idNumber: parsed.data.id_number,
+    idType: parsed.data.id_type,
+    nationality: parsed.data.nationality,
   }).returning();
 
   res.status(201).json(GetGuestResponse.parse(toGuestShape(guest)));
@@ -116,6 +117,9 @@ router.patch("/guests/:id", async (req, res): Promise<void> => {
   const updates: Record<string, unknown> = { updatedAt: new Date() };
   if (parsed.data.name !== undefined) updates.name = parsed.data.name;
   if (parsed.data.company !== undefined) updates.company = parsed.data.company;
+  if (parsed.data.id_number !== undefined) updates.idNumber = parsed.data.id_number;
+  if (parsed.data.id_type !== undefined) updates.idType = parsed.data.id_type;
+  if (parsed.data.nationality !== undefined) updates.nationality = parsed.data.nationality;
 
   const [guest] = await db.update(guestsTable).set(updates).where(eq(guestsTable.id, params.data.id)).returning();
   if (!guest) { res.status(404).json({ error: "Tamu tidak ditemukan" }); return; }
