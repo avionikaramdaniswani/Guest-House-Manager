@@ -104,6 +104,8 @@ export type BookingStayType = typeof BookingStayType[keyof typeof BookingStayTyp
 export const BookingStayType = {
   regular: 'regular',
   long_stay: 'long_stay',
+  long_stay_japan: 'long_stay_japan',
+  long_stay_local: 'long_stay_local',
 } as const;
 
 export interface Booking {
@@ -186,6 +188,8 @@ export interface Guest {
   nationality: string;
   /** @nullable */
   phone?: string | null;
+  /** @nullable */
+  company?: string | null;
   created_at: string;
 }
 
@@ -203,6 +207,8 @@ export interface GuestInput {
   id_type: GuestInputIdType;
   nationality: string;
   phone?: string;
+  /** @nullable */
+  company?: string | null;
 }
 
 export interface GuestUpdate {
@@ -212,6 +218,8 @@ export interface GuestUpdate {
   nationality?: string;
   /** @nullable */
   phone?: string | null;
+  /** @nullable */
+  company?: string | null;
 }
 
 export type BookingInputStayType = typeof BookingInputStayType[keyof typeof BookingInputStayType];

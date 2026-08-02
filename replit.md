@@ -4,15 +4,28 @@ A full Property Management System (PMS) web app for internal staff/receptionist 
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080)
-- `pnpm --filter @workspace/wisma run dev` — run the frontend (port 26272)
+### Replit (dev)
+- **"Start application"** workflow runs both services: API on port 8080, frontend on port 5000
 - `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
+- `pnpm run build` — typecheck + build frontend (→ `artifacts/wisma/dist/public/`) + compile API server
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- `psql $DATABASE_URL -f migrations/001_add_users.sql` — seed default users (admin / operator / viewer)
-- `psql $DATABASE_URL -f migrations/002_seed_rooms.sql` — seed all 49 rooms + default PIN setting
-- Required env: `DATABASE_URL` — Postgres connection string, `SESSION_SECRET`
+- `psql $SUPABASE_DATABASE_URL -f migrations/001_add_users.sql` — seed default users (admin / operator / viewer)
+- `psql $SUPABASE_DATABASE_URL -f migrations/002_seed_rooms.sql` — seed all 49 rooms + default PIN setting
+- Required secrets: `SUPABASE_DATABASE_URL` (or `DATABASE_URL`), `SESSION_SECRET`
+
+### Heroku deployment
+```
+heroku create <app-name>
+heroku config:set SUPABASE_DATABASE_URL=<your-db-url>
+heroku config:set SESSION_SECRET=<secret>
+heroku config:set NODE_ENV=production
+git push heroku main
+```
+- **Build step** (`pnpm run build`): typechecks, builds the React frontend, then compiles the Express API via esbuild
+- **Process** (`Procfile` → `web`): Express serves both the `/api` routes AND the compiled React SPA from `artifacts/wisma/dist/public/`
+- Single Heroku dyno, single PORT — no separate frontend process needed in production
+- Heroku uses corepack to install pnpm (defined in `"packageManager"` in root `package.json`)
 
 ### Default login credentials (after running seed)
 | Email | Password | Role |

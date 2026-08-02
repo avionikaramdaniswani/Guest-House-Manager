@@ -109,7 +109,7 @@ export const GetRoomResponse = zod.object({
   "actual_check_in": zod.coerce.date().nullish(),
   "actual_check_out": zod.coerce.date().nullish(),
   "status": zod.enum(['reserved', 'checked_in', 'checked_out', 'cancelled']),
-  "stay_type": zod.enum(['regular', 'long_stay']),
+  "stay_type": zod.enum(['regular', 'long_stay', 'long_stay_japan', 'long_stay_local']),
   "occupied_persons": zod.number().optional(),
   "price_per_night": zod.number().optional(),
   "total_amount": zod.number().nullish(),
@@ -174,7 +174,8 @@ export const CreateGuestBody = zod.object({
   "id_number": zod.string(),
   "id_type": zod.enum(['ktp', 'passport']),
   "nationality": zod.string(),
-  "phone": zod.string().optional()
+  "phone": zod.string().optional(),
+  "company": zod.string().nullish()
 })
 
 
@@ -208,7 +209,8 @@ export const UpdateGuestBody = zod.object({
   "id_number": zod.string().optional(),
   "id_type": zod.string().optional(),
   "nationality": zod.string().optional(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "company": zod.string().nullish()
 })
 
 export const UpdateGuestResponse = zod.object({
@@ -244,7 +246,7 @@ export const GetBookingsResponseItem = zod.object({
   "actual_check_in": zod.coerce.date().nullish(),
   "actual_check_out": zod.coerce.date().nullish(),
   "status": zod.enum(['reserved', 'checked_in', 'checked_out', 'cancelled']),
-  "stay_type": zod.enum(['regular', 'long_stay']),
+  "stay_type": zod.enum(['regular', 'long_stay', 'long_stay_japan', 'long_stay_local']),
   "occupied_persons": zod.number().optional(),
   "price_per_night": zod.number().optional(),
   "total_amount": zod.number().nullish(),
@@ -267,12 +269,14 @@ export const CreateBookingBody = zod.object({
   "id_number": zod.string(),
   "id_type": zod.enum(['ktp', 'passport']),
   "nationality": zod.string(),
-  "phone": zod.string().optional()
+  "phone": zod.string().optional(),
+  "company": zod.string().nullish()
 }).optional(),
   "check_in_date": zod.coerce.date(),
   "check_out_date": zod.coerce.date(),
-  "stay_type": zod.enum(['regular', 'long_stay']),
+  "stay_type": zod.enum(['regular', 'long_stay', 'long_stay_japan', 'long_stay_local']),
   "price_per_night": zod.number(),
+  "occupied_persons": zod.number().optional(),
   "deposit": zod.number().nullish(),
   "notes": zod.string().nullish()
 })
@@ -298,7 +302,7 @@ export const GetBookingResponse = zod.object({
   "actual_check_in": zod.coerce.date().nullish(),
   "actual_check_out": zod.coerce.date().nullish(),
   "status": zod.enum(['reserved', 'checked_in', 'checked_out', 'cancelled']),
-  "stay_type": zod.enum(['regular', 'long_stay']),
+  "stay_type": zod.enum(['regular', 'long_stay', 'long_stay_japan', 'long_stay_local']),
   "occupied_persons": zod.number().optional(),
   "price_per_night": zod.number().optional(),
   "total_amount": zod.number().nullish(),
@@ -320,6 +324,7 @@ export const UpdateBookingBody = zod.object({
   "check_in_date": zod.coerce.date().optional(),
   "check_out_date": zod.coerce.date().optional(),
   "price_per_night": zod.number().optional(),
+  "occupied_persons": zod.number().optional(),
   "deposit": zod.number().nullish(),
   "notes": zod.string().nullish(),
   "status": zod.enum(['reserved', 'checked_in', 'checked_out', 'cancelled']).optional()
@@ -338,7 +343,7 @@ export const UpdateBookingResponse = zod.object({
   "actual_check_in": zod.coerce.date().nullish(),
   "actual_check_out": zod.coerce.date().nullish(),
   "status": zod.enum(['reserved', 'checked_in', 'checked_out', 'cancelled']),
-  "stay_type": zod.enum(['regular', 'long_stay']),
+  "stay_type": zod.enum(['regular', 'long_stay', 'long_stay_japan', 'long_stay_local']),
   "occupied_persons": zod.number().optional(),
   "price_per_night": zod.number().optional(),
   "total_amount": zod.number().nullish(),
@@ -382,7 +387,7 @@ export const CheckInResponse = zod.object({
   "actual_check_in": zod.coerce.date().nullish(),
   "actual_check_out": zod.coerce.date().nullish(),
   "status": zod.enum(['reserved', 'checked_in', 'checked_out', 'cancelled']),
-  "stay_type": zod.enum(['regular', 'long_stay']),
+  "stay_type": zod.enum(['regular', 'long_stay', 'long_stay_japan', 'long_stay_local']),
   "occupied_persons": zod.number().optional(),
   "price_per_night": zod.number().optional(),
   "total_amount": zod.number().nullish(),
@@ -420,7 +425,7 @@ export const CheckOutResponse = zod.object({
   "actual_check_in": zod.coerce.date().nullish(),
   "actual_check_out": zod.coerce.date().nullish(),
   "status": zod.enum(['reserved', 'checked_in', 'checked_out', 'cancelled']),
-  "stay_type": zod.enum(['regular', 'long_stay']),
+  "stay_type": zod.enum(['regular', 'long_stay', 'long_stay_japan', 'long_stay_local']),
   "occupied_persons": zod.number().optional(),
   "price_per_night": zod.number().optional(),
   "total_amount": zod.number().nullish(),
@@ -469,7 +474,7 @@ export const GetTodayActivityResponse = zod.object({
   "actual_check_in": zod.coerce.date().nullish(),
   "actual_check_out": zod.coerce.date().nullish(),
   "status": zod.enum(['reserved', 'checked_in', 'checked_out', 'cancelled']),
-  "stay_type": zod.enum(['regular', 'long_stay']),
+  "stay_type": zod.enum(['regular', 'long_stay', 'long_stay_japan', 'long_stay_local']),
   "occupied_persons": zod.number().optional(),
   "price_per_night": zod.number().optional(),
   "total_amount": zod.number().nullish(),
@@ -491,7 +496,7 @@ export const GetTodayActivityResponse = zod.object({
   "actual_check_in": zod.coerce.date().nullish(),
   "actual_check_out": zod.coerce.date().nullish(),
   "status": zod.enum(['reserved', 'checked_in', 'checked_out', 'cancelled']),
-  "stay_type": zod.enum(['regular', 'long_stay']),
+  "stay_type": zod.enum(['regular', 'long_stay', 'long_stay_japan', 'long_stay_local']),
   "occupied_persons": zod.number().optional(),
   "price_per_night": zod.number().optional(),
   "total_amount": zod.number().nullish(),
@@ -542,7 +547,7 @@ export const GetDailyReportResponse = zod.object({
   "actual_check_in": zod.coerce.date().nullish(),
   "actual_check_out": zod.coerce.date().nullish(),
   "status": zod.enum(['reserved', 'checked_in', 'checked_out', 'cancelled']),
-  "stay_type": zod.enum(['regular', 'long_stay']),
+  "stay_type": zod.enum(['regular', 'long_stay', 'long_stay_japan', 'long_stay_local']),
   "occupied_persons": zod.number().optional(),
   "price_per_night": zod.number().optional(),
   "total_amount": zod.number().nullish(),
